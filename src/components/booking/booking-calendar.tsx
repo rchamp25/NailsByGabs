@@ -188,6 +188,7 @@ export function BookingCalendar({
           <ul className="flex flex-col gap-3">
             {slots.map((slot) => {
               const isMine = slot.booked_by === userId;
+              const isOpen = slot.status === "open";
               return (
                 <li
                   key={slot.id}
