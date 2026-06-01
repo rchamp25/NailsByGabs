@@ -29,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatOwnerSlotLabel } from "@/lib/auth";
+import { formatOwnerSlotLabel } from "@/lib/booking-display";
 import { formatSlotRange } from "@/lib/dates";
 import type { Profile, SlotWithBooker } from "@/types/database";
 
