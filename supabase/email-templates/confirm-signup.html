@@ -1,0 +1,42 @@
+Subject: Confirm your NailsByGabs account
+
+<!-- Paste into Supabase → Authentication → Email Templates → Confirm signup -->
+<!-- Supabase uses Go template syntax. Keep {{ .ConfirmationURL }} exactly as shown. -->
+
+<h2 style="color:#c62828;font-family:Georgia,serif;">Welcome to NailsByGabs</h2>
+
+<p>Hi there,</p>
+
+<p>
+  Thanks for creating an account with <strong>NailsByGabs</strong> — Gabs&apos;s
+  nail artistry booking site. Once you confirm your email, you&apos;ll be able to:
+</p>
+
+<ul>
+  <li>View open appointment times on the calendar</li>
+  <li>Reserve a slot that works for you</li>
+  <li>Add notes about your nail design or special requests</li>
+</ul>
+
+<p>
+  <strong>No payment is processed on the website.</strong> This account is only
+  used to manage your appointments with Gabs.
+</p>
+
+<p>
+  <a
+    href="{{ .ConfirmationURL }}"
+    style="display:inline-block;background:#c62828;color:#fff8fa;padding:12px 24px;border-radius:8px;text-decoration:none;border:1px solid #c9a227;"
+  >
+    Confirm my email
+  </a>
+</p>
+
+<p style="color:#7a4a58;font-size:14px;">
+  If you didn&apos;t sign up for NailsByGabs, you can safely ignore this email.
+</p>
+
+<p style="color:#7a4a58;font-size:14px;">
+  With love,<br />
+  NailsByGabs
+</p>

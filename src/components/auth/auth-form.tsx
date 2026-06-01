@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { signIn, signUp } from "@/app/auth/actions";
+import { signIn, signUp, type AuthActionState } from "@/app/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,13 +21,19 @@ type AuthFormProps = {
 };
 
 export function AuthForm({ mode }: AuthFormProps) {
+  const router = useRouter();
   const action = mode === "login" ? signIn : signUp;
-  const [state, formAction, pending] = useActionState(
-    async (_prev: { error?: string } | null, formData: FormData) => {
-      return (await action(formData)) ?? null;
-    },
+  const [state, formAction, pending] = useActionState<AuthActionState | null>(
+    action,
     null
   );
+
+  useEffect(() => {
+    if (state?.success && !state.message) {
+      router.push("/book");
+      router.refresh();
+    }
+  }, [state, router]);
 
   return (
     <Card className="border-gold/30 mx-auto w-full max-w-md">
@@ -81,6 +88,11 @@ export function AuthForm({ mode }: AuthFormProps) {
           {state?.error && (
             <p className="text-sm text-rose-red" role="alert">
               {state.error}
+            </p>
+          )}
+          {state?.message && (
+            <p className="text-sm text-rose-red-deep" role="status">
+              {state.message}
             </p>
           )}
           <Button type="submit" disabled={pending} className="w-full">

@@ -1,5 +1,6 @@
 import { BookingCalendar } from "@/components/booking/booking-calendar";
 import { BookingGate } from "@/components/booking/booking-gate";
+import { WelcomeBanner } from "@/components/auth/welcome-banner";
 import { SiteHeader } from "@/components/site-header";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -52,8 +53,13 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
   });
 }
 
-export default async function BookPage() {
+export default async function BookPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
   const { user, profile } = await getSessionProfile();
+  const { welcome } = await searchParams;
   const slots = user && profile ? await getUpcomingSlots() : [];
 
   return (
@@ -73,6 +79,8 @@ export default async function BookPage() {
               : "Choose an open slot and add notes for special requests. Other booked times appear as Taken."}
           </p>
         </div>
+
+        <WelcomeBanner show={welcome === "1" && !!user} />
 
         {!user || !profile ? (
           <BookingGate />

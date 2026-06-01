@@ -9,10 +9,13 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
 1. Create a project at [supabase.com](https://supabase.com).
 2. In **SQL Editor**, run the full script in `supabase/migrations/001_initial.sql`.
 3. In **Table Editor → app_config**, set `owner_email` to Gabs’s sign-up email (this account gets the **owner** role).
-4. Under **Authentication → URL Configuration**, add:
-   - Site URL: `http://localhost:3000` (and your Vercel URL later)
-   - Redirect URLs: `http://localhost:3000/auth/callback`, `https://your-domain.vercel.app/auth/callback`
-5. Copy **Project URL** and **anon public** key into `.env.local` (see `.env.example`).
+4. Under **Authentication → URL Configuration**:
+   - **Site URL:** your live Vercel URL (e.g. `https://nails-by-gabs.vercel.app`) — **not** localhost in production
+   - **Redirect URLs:** add both:
+     - `https://your-app.vercel.app/auth/callback`
+     - `http://localhost:3000/auth/callback` (for local dev only)
+5. **Friendly confirmation emails:** In **Authentication → Email Templates → Confirm signup**, paste the HTML from `supabase/email-templates/confirm-signup.html`. Set the subject to `Confirm your NailsByGabs account`.
+6. Copy **Project URL** and **anon public** key into `.env.local` (see `.env.example`).
 
 ### 2. Local dev
 
@@ -29,8 +32,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. Push to GitHub and import the repo in Vercel.
 2. Add the same env vars from `.env.local` in **Project Settings → Environment Variables**.
-3. Set `NEXT_PUBLIC_SITE_URL` to your production URL (e.g. `https://nailsbygabs.vercel.app`).
-4. Add the production `/auth/callback` URL in Supabase redirect allowlist.
+3. Set **`NEXT_PUBLIC_SITE_URL`** to your production URL (e.g. `https://nails-by-gabs.vercel.app`) for the **Production** environment. This is what confirmation emails use — if it is missing or set to localhost, verify links will break.
+4. Redeploy after changing env vars.
+5. In Supabase, set **Site URL** to the same production URL and confirm `/auth/callback` is in **Redirect URLs**.
 
 ## Booking flow
 
