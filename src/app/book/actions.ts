@@ -3,7 +3,28 @@
 import { revalidatePath } from "next/cache";
 
 import { getSessionProfile } from "@/lib/auth";
+import {
+  deleteGoogleCalendarEvent,
+  syncSlotToGoogleCalendar,
+} from "@/lib/google-calendar";
 import { createClient } from "@/lib/supabase/server";
+
+async function getOwnerProfileId(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "owner")
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+async function syncGoogleForSlot(slotId: string) {
+  const ownerId = await getOwnerProfileId();
+  if (!ownerId) return;
+  await syncSlotToGoogleCalendar(slotId, ownerId);
+}
 
 export async function createSlot(formData: FormData) {
   const { profile } = await getSessionProfile();
@@ -24,14 +45,22 @@ export async function createSlot(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("appointment_slots").insert({
-    start_at: startAt.toISOString(),
-    end_at: endAt.toISOString(),
-    status: "open",
-  });
+  const { data, error } = await supabase
+    .from("appointment_slots")
+    .insert({
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+      status: "open",
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (data?.id) {
+    await syncGoogleForSlot(data.id);
   }
 
   revalidatePath("/book");
@@ -42,6 +71,10 @@ export async function deleteSlot(slotId: string) {
   const { profile } = await getSessionProfile();
   if (!profile || profile.role !== "owner") {
     return { error: "Only the owner can delete slots." };
+  }
+
+  if (profile.id) {
+    await deleteGoogleCalendarEvent(slotId, profile.id);
   }
 
   const supabase = await createClient();
@@ -74,6 +107,8 @@ export async function releaseSlot(slotId: string) {
     return { error: error.message };
   }
 
+  await syncGoogleForSlot(slotId);
+
   revalidatePath("/book");
   return { success: true };
 }
@@ -84,7 +119,9 @@ export async function bookSlot(slotId: string, notes: string) {
     return { error: "Please sign in to book." };
   }
   if (profile.role === "owner") {
-    return { error: "Owner accounts manage slots; use a client account to book." };
+    return {
+      error: "Owner accounts manage slots; use a client account to book.",
+    };
   }
 
   const supabase = await createClient();
@@ -96,6 +133,8 @@ export async function bookSlot(slotId: string, notes: string) {
   if (error) {
     return { error: error.message };
   }
+
+  await syncGoogleForSlot(slotId);
 
   revalidatePath("/book");
   return { success: true };
@@ -115,6 +154,8 @@ export async function cancelMyBooking(slotId: string) {
   if (error) {
     return { error: error.message };
   }
+
+  await syncGoogleForSlot(slotId);
 
   revalidatePath("/book");
   return { success: true };

@@ -3,6 +3,10 @@ import { BookingGate } from "@/components/booking/booking-gate";
 import { WelcomeBanner } from "@/components/auth/welcome-banner";
 import { SiteHeader } from "@/components/site-header";
 import { getSessionProfile } from "@/lib/auth";
+import {
+  isGoogleCalendarConnected,
+  isGoogleOAuthConfigured,
+} from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
 import type { SlotWithBooker } from "@/types/database";
 
@@ -56,11 +60,17 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
 export default async function BookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string }>;
+  searchParams: Promise<{ welcome?: string; google?: string }>;
 }) {
   const { user, profile } = await getSessionProfile();
-  const { welcome } = await searchParams;
+  const { welcome, google } = await searchParams;
   const slots = user && profile ? await getUpcomingSlots() : [];
+
+  const googleConnected =
+    profile?.role === "owner" && user
+      ? await isGoogleCalendarConnected(user.id)
+      : false;
+  const googleConfigured = isGoogleOAuthConfigured();
 
   return (
     <>
@@ -82,10 +92,25 @@ export default async function BookPage({
 
         <WelcomeBanner show={welcome === "1" && !!user} />
 
+        {google === "connected" && profile?.role === "owner" && (
+          <p
+            className="rounded-xl border border-gold/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            role="status"
+          >
+            Google Calendar connected — appointments will sync automatically.
+          </p>
+        )}
+
         {!user || !profile ? (
           <BookingGate />
         ) : (
-          <BookingCalendar slots={slots} profile={profile} userId={user.id} />
+          <BookingCalendar
+            slots={slots}
+            profile={profile}
+            userId={user.id}
+            googleConnected={googleConnected}
+            googleConfigured={googleConfigured}
+          />
         )}
       </div>
     </>

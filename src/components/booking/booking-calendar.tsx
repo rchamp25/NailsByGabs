@@ -11,6 +11,9 @@ import {
   deleteSlot,
   releaseSlot,
 } from "@/app/book/actions";
+import { AddToCalendarButtons } from "@/components/booking/add-to-calendar-buttons";
+import { AppointmentCalendarGrid } from "@/components/booking/appointment-calendar-grid";
+import { GoogleCalendarConnect } from "@/components/booking/google-calendar-connect";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,16 +40,21 @@ type BookingCalendarProps = {
   slots: SlotWithBooker[];
   profile: Profile;
   userId: string;
+  googleConnected: boolean;
+  googleConfigured: boolean;
 };
 
 export function BookingCalendar({
   slots,
   profile,
   userId,
+  googleConnected,
+  googleConfigured,
 }: BookingCalendarProps) {
   const isOwner = profile.role === "owner";
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [selectedSlot, setSelectedSlot] = useState<SlotWithBooker | null>(null);
   const [bookTarget, setBookTarget] = useState<SlotWithBooker | null>(null);
   const [notes, setNotes] = useState("");
   const [bookError, setBookError] = useState<string | null>(null);
@@ -75,12 +83,14 @@ export function BookingCalendar({
     }
     setBookTarget(null);
     setNotes("");
+    setSelectedSlot(null);
     router.refresh();
   }
 
   function runAction(fn: () => Promise<{ error?: string } | { success?: boolean }>) {
     startTransition(async () => {
       await fn();
+      setSelectedSlot(null);
       router.refresh();
     });
   }
@@ -97,75 +107,104 @@ export function BookingCalendar({
     return formatOwnerSlotLabel(name);
   }
 
+  function getLabel(slot: SlotWithBooker) {
+    return isOwner ? getOwnerLabel(slot) : getClientLabel(slot);
+  }
+
+  function handleSelectSlot(slot: SlotWithBooker) {
+    setSelectedSlot(slot);
+    if (!isOwner && slot.status === "open") {
+      setBookTarget(slot);
+    }
+  }
+
+  const activeSlot = selectedSlot;
+  const isMine = activeSlot?.booked_by === userId;
+  const isOpen = activeSlot?.status === "open";
+
   return (
     <div className="flex flex-col gap-8">
       {isOwner && (
-        <Card className="border-gold/30">
-          <CardHeader>
-            <CardTitle className="text-rose-red">Add open slot</CardTitle>
-            <CardDescription>
-              Set the start and end time. Clients can reserve open slots only.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={createAction} className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="startAt">Starts</Label>
-                <Input
-                  id="startAt"
-                  name="startAt"
-                  type="datetime-local"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endAt">Ends</Label>
-                <Input id="endAt" name="endAt" type="datetime-local" required />
-              </div>
-              {createState?.error && (
-                <p className="text-sm text-rose-red sm:col-span-2" role="alert">
-                  {createState.error}
-                </p>
-              )}
-              <Button
-                type="submit"
-                disabled={createPending}
-                className="sm:col-span-2 sm:w-fit"
-              >
-                {createPending ? "Adding…" : "Add slot"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <>
+          <GoogleCalendarConnect
+            connected={googleConnected}
+            configured={googleConfigured}
+          />
+          <Card className="border-gold/30">
+            <CardHeader>
+              <CardTitle className="text-rose-red">Add open slot</CardTitle>
+              <CardDescription>
+                Set the start and end time. Syncs to Google Calendar when connected.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={createAction} className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="startAt">Starts</Label>
+                  <Input
+                    id="startAt"
+                    name="startAt"
+                    type="datetime-local"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endAt">Ends</Label>
+                  <Input id="endAt" name="endAt" type="datetime-local" required />
+                </div>
+                {createState?.error && (
+                  <p className="text-sm text-rose-red sm:col-span-2" role="alert">
+                    {createState.error}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  disabled={createPending}
+                  className="sm:col-span-2 sm:w-fit"
+                >
+                  {createPending ? "Adding…" : "Add slot"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {!isOwner && myBookings.length > 0 && (
         <Card className="border-gold/25 bg-card/80">
           <CardHeader>
             <CardTitle className="text-lg text-rose-red">Your appointments</CardTitle>
+            <CardDescription>
+              Add any booking to your personal Google Calendar or download an .ics file.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+          <CardContent className="flex flex-col gap-4">
             {myBookings.map((slot) => (
               <div
                 key={slot.id}
-                className="border-border/80 flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="border-border/80 flex flex-col gap-3 rounded-lg border p-4"
               >
                 <div>
-                  <p className="font-medium">{formatSlotRange(slot.start_at, slot.end_at)}</p>
+                  <p className="font-medium">
+                    {formatSlotRange(slot.start_at, slot.end_at)}
+                  </p>
                   {slot.notes && (
                     <p className="text-muted-foreground mt-1 text-sm">
                       Notes: {slot.notes}
                     </p>
                   )}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => runAction(() => cancelMyBooking(slot.id))}
-                >
-                  Cancel booking
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <AddToCalendarButtons slot={slot} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => runAction(() => cancelMyBooking(slot.id))}
+                  >
+                    Cancel booking
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
@@ -185,86 +224,99 @@ export function BookingCalendar({
               : "No open times right now. Check back soon!"}
           </p>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {slots.map((slot) => {
-              const isMine = slot.booked_by === userId;
-              const isOpen = slot.status === "open";
-              return (
-                <li
-                  key={slot.id}
-                  className="border-border/80 flex flex-col gap-3 rounded-xl border bg-card/90 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">
-                      {formatSlotRange(slot.start_at, slot.end_at)}
-                    </p>
-                    <p
-                      className={
-                        isOwner && slot.status === "booked"
-                          ? "text-rose-red-deep mt-1 font-serif text-lg"
-                          : "text-muted-foreground mt-1 text-sm"
-                      }
-                    >
-                      {isOwner ? getOwnerLabel(slot) : getClientLabel(slot)}
-                    </p>
-                    {isOwner && slot.notes && (
-                      <p className="text-muted-foreground mt-2 text-sm">
-                        Client notes: {slot.notes}
-                      </p>
-                    )}
-                    {!isOwner && isMine && slot.notes && (
-                      <p className="text-muted-foreground mt-2 text-sm">
-                        Your notes: {slot.notes}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {!isOwner && isOpen && (
-                      <Button size="sm" onClick={() => setBookTarget(slot)}>
-                        Reserve
-                      </Button>
-                    )}
-                    {isOwner && isOpen && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pending}
-                        onClick={() => runAction(() => deleteSlot(slot.id))}
-                      >
-                        <Trash2 className="size-4" />
-                        Delete
-                      </Button>
-                    )}
-                    {isOwner && slot.status === "booked" && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={pending}
-                          onClick={() => runAction(() => releaseSlot(slot.id))}
-                        >
-                          <Undo2 className="size-4" />
-                          Release
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={pending}
-                          onClick={() => runAction(() => deleteSlot(slot.id))}
-                        >
-                          <Trash2 className="size-4" />
-                          Delete
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <AppointmentCalendarGrid
+            slots={slots}
+            userId={userId}
+            isOwner={isOwner}
+            getLabel={getLabel}
+            onSelectSlot={handleSelectSlot}
+            selectedSlotId={selectedSlot?.id}
+          />
         )}
       </div>
+
+      {activeSlot && (
+        <Card className="border-gold/30">
+          <CardHeader>
+            <CardTitle className="text-lg text-rose-red">Selected slot</CardTitle>
+            <CardDescription>
+              {formatSlotRange(activeSlot.start_at, activeSlot.end_at)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p
+              className={
+                isOwner && activeSlot.status === "booked"
+                  ? "font-serif text-xl text-rose-red-deep"
+                  : "text-muted-foreground"
+              }
+            >
+              {getLabel(activeSlot)}
+            </p>
+            {activeSlot.notes && (isOwner || isMine) && (
+              <p className="text-muted-foreground text-sm">
+                Notes: {activeSlot.notes}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {!isOwner && isOpen && (
+                <Button size="sm" onClick={() => setBookTarget(activeSlot)}>
+                  Reserve
+                </Button>
+              )}
+              {!isOwner && isMine && (
+                <>
+                  <AddToCalendarButtons slot={activeSlot} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() =>
+                      runAction(() => cancelMyBooking(activeSlot.id))
+                    }
+                  >
+                    Cancel booking
+                  </Button>
+                </>
+              )}
+              {isOwner && isOpen && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => runAction(() => deleteSlot(activeSlot.id))}
+                >
+                  <Trash2 className="size-4" />
+                  Delete
+                </Button>
+              )}
+              {isOwner && activeSlot.status === "booked" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => runAction(() => releaseSlot(activeSlot.id))}
+                  >
+                    <Undo2 className="size-4" />
+                    Release
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => runAction(() => deleteSlot(activeSlot.id))}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog
         open={!!bookTarget}
