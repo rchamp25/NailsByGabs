@@ -7,6 +7,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupabaseConfigError, getSupabaseEnv } from "@/lib/supabase/env";
 import { getAuthCallbackUrl } from "@/lib/site-url";
 
+export type AuthActionState = {
+  error?: string;
+  success?: boolean;
+  message?: string;
+};
+
 export async function signUp(
   _prevState: AuthActionState | null,
   formData: FormData
