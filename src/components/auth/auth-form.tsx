@@ -22,11 +22,14 @@ type AuthFormProps = {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
-  const action = mode === "login" ? signIn : signUp;
-  const [state, formAction, pending] = useActionState<AuthActionState | null>(
-    action,
-    null
-  );
+  const [state, formAction, pending] = useActionState<
+    AuthActionState | null,
+    FormData
+  >(async (prevState, formData) => {
+    return mode === "login"
+      ? signIn(prevState, formData)
+      : signUp(prevState, formData);
+  }, null);
 
   useEffect(() => {
     if (state?.success && !state.message) {
