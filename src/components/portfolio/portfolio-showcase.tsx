@@ -11,7 +11,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 
 type PortfolioTag =
   | "All"
@@ -170,12 +169,7 @@ export function PortfolioShowcase() {
             key={image.src}
             type="button"
             onClick={() => openImage(index)}
-            className={cn(
-              "gold-ring-hover animate-portfolio-item group relative overflow-hidden rounded-2xl border border-border/60 text-left",
-              index === 0
-                ? "col-span-2 row-span-2 aspect-[4/5] md:col-span-2"
-                : "aspect-square"
-            )}
+            className="gold-ring-hover animate-portfolio-item group relative aspect-square overflow-hidden rounded-2xl border border-border/60 text-left"
             style={{ animationDelay: `${index * 55}ms` }}
           >
             <Image
