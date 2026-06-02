@@ -121,7 +121,8 @@ function detectTags(fileName: string): Exclude<PortfolioTag, "All">[] {
 }
 
 function prettifyType(raw: string): string {
-  const cleaned = raw.replace(/\d+/g, "");
+  // Keep the "3" in "3D", but strip numeric suffixes like Fun3/Fun11.
+  const cleaned = raw.replace(/\d+(?![dD])/g, "");
   if (!cleaned) return "";
   const normalized = normalizeFileName(cleaned);
   const matchedTag = (Object.keys(fileNameMatchers) as Exclude<PortfolioTag, "All">[]).find(
@@ -137,7 +138,7 @@ function prettifyType(raw: string): string {
 function titleFromFileName(fileName: string): string {
   const base = fileName.replace(/\.[^.]+$/, "");
   const parts = base.split("W").map(prettifyType).filter(Boolean);
-  if (parts.length === 0) return base.replace(/\d+/g, "");
+  if (parts.length === 0) return base.replace(/\d+(?![dD])/g, "");
   if (parts.length === 1) return parts[0];
   if (parts.length === 2) return `${parts[0]} & ${parts[1]}`;
   return parts.join(", ");
