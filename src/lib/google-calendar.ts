@@ -3,6 +3,7 @@ import "server-only";
 import { toGoogleCalendarDateTime } from "@/lib/business-timezone";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
 import { getSiteUrl } from "@/lib/site-url";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 function getGoogleRedirectUri(): string {
@@ -19,11 +20,22 @@ function getGoogleOAuthConfig() {
   return { clientId, clientSecret };
 }
 
+function getSyncSupabase() {
+  return createServiceRoleClient();
+}
+
 async function getOwnerRefreshToken(ownerId: string): Promise<{
   refreshToken: string;
   calendarId: string;
 } | null> {
-  const supabase = await createClient();
+  const supabase = getSyncSupabase();
+  if (!supabase) {
+    console.error(
+      "[google-calendar] SUPABASE_SERVICE_ROLE_KEY is not set; cannot sync when clients book."
+    );
+    return null;
+  }
+
   const { data } = await supabase
     .from("owner_integrations")
     .select("google_refresh_token, google_calendar_id")
@@ -69,7 +81,9 @@ type SlotRow = {
 };
 
 async function getSlot(slotId: string): Promise<SlotRow | null> {
-  const supabase = await createClient();
+  const supabase = getSyncSupabase();
+  if (!supabase) return null;
+
   const { data } = await supabase
     .from("appointment_slots")
     .select(
@@ -118,7 +132,9 @@ export async function syncSlotToGoogleCalendar(
   const slot = await getSlot(slotId);
   if (!slot) return;
 
-  const supabase = await createClient();
+  const supabase = getSyncSupabase();
+  if (!supabase) return;
+
   const body = {
     summary: getEventTitle(slot),
     description: getEventDescription(slot),
@@ -129,7 +145,7 @@ export async function syncSlotToGoogleCalendar(
   const calendarBase = `${GOOGLE_CALENDAR_API}/${encodeURIComponent(integration.calendarId)}/events`;
 
   if (slot.google_event_id) {
-    await fetch(`${calendarBase}/${slot.google_event_id}`, {
+    const patchResponse = await fetch(`${calendarBase}/${slot.google_event_id}`, {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -137,7 +153,20 @@ export async function syncSlotToGoogleCalendar(
       },
       body: JSON.stringify(body),
     });
-    return;
+
+    if (patchResponse.ok) {
+      return;
+    }
+
+    console.error(
+      "[google-calendar] PATCH failed:",
+      patchResponse.status,
+      await patchResponse.text().catch(() => "")
+    );
+
+    if (patchResponse.status !== 404) {
+      return;
+    }
   }
 
   const response = await fetch(calendarBase, {
@@ -149,7 +178,14 @@ export async function syncSlotToGoogleCalendar(
     body: JSON.stringify(body),
   });
 
-  if (!response.ok) return;
+  if (!response.ok) {
+    console.error(
+      "[google-calendar] POST failed:",
+      response.status,
+      await response.text().catch(() => "")
+    );
+    return;
+  }
 
   const created = (await response.json()) as { id?: string };
   if (created.id) {
@@ -180,7 +216,9 @@ export async function deleteGoogleCalendarEvent(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  const supabase = await createClient();
+  const supabase = getSyncSupabase();
+  if (!supabase) return;
+
   await supabase
     .from("appointment_slots")
     .update({ google_event_id: null })

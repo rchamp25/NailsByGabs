@@ -67,7 +67,10 @@ No business-hours rules — Gabs sets each slot’s start and end manually.
 1. [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → enable **Google Calendar API**.
 2. Create **OAuth 2.0 Client ID** (Web application).
 3. Authorized redirect URI: `https://nailsbygabs.org/api/google/callback`
-4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to Vercel env vars and redeploy.
+4. Add to Vercel env vars and redeploy:
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project Settings → API → **service_role** secret; server-only — needed so client bookings update Gabs’s calendar)
 5. Owner signs in → Book Appointment → **Connect Google Calendar**.
 
 ### Owner booking email notifications (free)
