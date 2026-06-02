@@ -10,6 +10,7 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
 2. In **SQL Editor**, run:
    - `supabase/migrations/001_initial.sql`
    - `supabase/migrations/002_services_and_google.sql` (editable prices + Google sync)
+   - `supabase/migrations/003_owner_notifications.sql` (app_config read policy for notifications)
 3. In **Table Editor → app_config**, set `owner_email` to Gabs’s sign-up email (this account gets the **owner** role).
 4. Under **Authentication → URL Configuration**:
    - **Site URL:** your live Vercel URL (e.g. `https://nails-by-gabs.vercel.app`) — **not** localhost in production
@@ -62,13 +63,21 @@ No business-hours rules — Gabs sets each slot’s start and end manually.
 4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to Vercel env vars and redeploy.
 5. Owner signs in → Book Appointment → **Connect Google Calendar**.
 
+### Owner booking email notifications (free)
+
+Automated texts (Twilio, etc.) require a paid service — there isn’t a reliable free SMS option for apps. Instead, Gabs gets an **email** when someone books (works great on phone mail apps).
+
+Uses [Resend](https://resend.com) — **3,000 emails/month free**, no credit card needed to start.
+
+1. Sign up at Resend → create an API key.
+2. In Vercel env vars, set:
+   - `RESEND_API_KEY`
+   - `OWNER_NOTIFICATION_EMAIL` (Gabs’s email — or use `owner_email` already in Supabase `app_config`)
+   - `RESEND_FROM_EMAIL` (optional; `onboarding@resend.dev` works for testing)
+3. Redeploy and book a test appointment.
+
+Emails include client name, time, notes, and a link to the calendar.
+
 ## Customize content
 
-Edit `src/lib/data.ts` for services, about page, and social links. Add portfolio images under `public/portfolio/` (coming next).
-
-## Later: email / SMS notifications
-
-Not included in v1. Options when ready:
-
-- **Email:** Supabase Auth hooks, Resend, or Vercel + React Email on new bookings
-- **SMS:** Twilio when you want text alerts
+Edit `src/lib/data.ts` for about page and social links. Add portfolio images under `public/portfolio/` (coming next).

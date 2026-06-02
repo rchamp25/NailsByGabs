@@ -7,6 +7,7 @@ import {
   deleteGoogleCalendarEvent,
   syncSlotToGoogleCalendar,
 } from "@/lib/google-calendar";
+import { notifyOwnerOfBooking } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/server";
 
 async function getOwnerProfileId(): Promise<string | null> {
@@ -135,6 +136,7 @@ export async function bookSlot(slotId: string, notes: string) {
   }
 
   await syncGoogleForSlot(slotId);
+  await notifyOwnerOfBooking(slotId);
 
   revalidatePath("/book");
   return { success: true };
