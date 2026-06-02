@@ -58,8 +58,32 @@ export function BookingCalendar({
   const [bookTarget, setBookTarget] = useState<SlotWithBooker | null>(null);
   const [justBookedSlot, setJustBookedSlot] = useState<SlotWithBooker | null>(null);
   const [preBooked, setPreBooked] = useState(false);
+  const [slotStartAt, setSlotStartAt] = useState("");
+  const [slotEndAt, setSlotEndAt] = useState("");
   const [notes, setNotes] = useState("");
   const [bookError, setBookError] = useState<string | null>(null);
+
+  function formatDateTimeLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  function addOneHourFromStart(startValue: string): string {
+    const start = new Date(startValue);
+    if (Number.isNaN(start.getTime())) return startValue;
+    return formatDateTimeLocal(new Date(start.getTime() + 60 * 60 * 1000));
+  }
+
+  function handleSlotStartChange(startValue: string) {
+    setSlotStartAt(startValue);
+    if (startValue) {
+      setSlotEndAt(addOneHourFromStart(startValue));
+    }
+  }
 
   const myBookings = slots.filter(
     (s) => s.status === "booked" && s.booked_by === userId
@@ -69,6 +93,9 @@ export function BookingCalendar({
     async (_prev: { error?: string } | null, formData: FormData) => {
       const result = await createSlot(formData);
       if (result?.error) return { error: result.error };
+      setSlotStartAt("");
+      setSlotEndAt("");
+      setPreBooked(false);
       router.refresh();
       return null;
     },
@@ -143,7 +170,8 @@ export function BookingCalendar({
             <CardHeader>
               <CardTitle className="text-rose-red">Add open slot</CardTitle>
               <CardDescription>
-                Set the start and end time. Syncs to Google Calendar when connected.
+                Choose a start time — end time defaults to one hour later (you can
+                change it). Syncs to Google Calendar when connected.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -154,12 +182,21 @@ export function BookingCalendar({
                     id="startAt"
                     name="startAt"
                     type="datetime-local"
+                    value={slotStartAt}
+                    onChange={(event) => handleSlotStartChange(event.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endAt">Ends</Label>
-                  <Input id="endAt" name="endAt" type="datetime-local" required />
+                  <Input
+                    id="endAt"
+                    name="endAt"
+                    type="datetime-local"
+                    value={slotEndAt}
+                    onChange={(event) => setSlotEndAt(event.target.value)}
+                    required
+                  />
                 </div>
                 <div className="sm:col-span-2 flex items-center gap-2">
                   <input
