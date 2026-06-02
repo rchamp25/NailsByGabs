@@ -14,104 +14,129 @@ import {
 
 type PortfolioTag =
   | "All"
-  | "Almond"
-  | "Square"
+  | "Aura"
+  | "Blooming"
+  | "Fun"
+  | "Fruit"
+  | "Ombre"
   | "French"
   | "Chrome"
-  | "Aura"
   | "Cat Eye";
 
 type PortfolioImage = {
   src: string;
   title: string;
-  tags: Exclude<PortfolioTag, "All">[];
+  fileName: string;
   focal: string;
 };
 
 const portfolioImages: PortfolioImage[] = [
   {
-    src: "/portfolio/IMG_5264.jpeg",
-    title: "Set 1",
-    tags: ["Almond", "French"],
+    src: "/portfolio/3DGelNails.jpeg",
+    title: "3D Gel Nails",
+    fileName: "3DGelNails.jpeg",
     focal: "50% 40%",
   },
   {
-    src: "/portfolio/IMG_5268.jpeg",
-    title: "Set 2",
-    tags: ["Almond", "Chrome"],
+    src: "/portfolio/AuraNails1.jpeg",
+    title: "Aura Nails 1",
+    fileName: "AuraNails1.jpeg",
     focal: "50% 45%",
   },
   {
-    src: "/portfolio/IMG_5397.jpeg",
-    title: "Set 3",
-    tags: ["Square"],
+    src: "/portfolio/BloomingGel.jpeg",
+    title: "Blooming Gel",
+    fileName: "BloomingGel.jpeg",
     focal: "52% 42%",
   },
   {
-    src: "/portfolio/IMG_5443.jpeg",
-    title: "Set 4",
-    tags: ["Almond", "French"],
+    src: "/portfolio/FrenchWChrome.jpeg",
+    title: "French with Chrome",
+    fileName: "FrenchWChrome.jpeg",
     focal: "50% 42%",
   },
   {
-    src: "/portfolio/IMG_5526.jpeg",
-    title: "Set 5",
-    tags: ["Square", "Chrome"],
+    src: "/portfolio/FruitNails1.jpeg",
+    title: "Fruit Nails 1",
+    fileName: "FruitNails1.jpeg",
     focal: "50% 38%",
   },
   {
-    src: "/portfolio/IMG_5654.jpeg",
-    title: "Set 6",
-    tags: ["Almond", "Aura"],
+    src: "/portfolio/FunNails1.jpeg",
+    title: "Fun Nails 1",
+    fileName: "FunNails1.jpeg",
     focal: "50% 45%",
   },
   {
-    src: "/portfolio/IMG_5819.jpeg",
-    title: "Set 7",
-    tags: ["Square", "Cat Eye"],
+    src: "/portfolio/FunNails2.jpeg",
+    title: "Fun Nails 2",
+    fileName: "FunNails2.jpeg",
     focal: "50% 46%",
   },
   {
-    src: "/portfolio/IMG_5851.jpeg",
-    title: "Set 8",
-    tags: ["Almond", "Chrome"],
+    src: "/portfolio/FunNails3.jpeg",
+    title: "Fun Nails 3",
+    fileName: "FunNails3.jpeg",
     focal: "50% 44%",
   },
   {
-    src: "/portfolio/IMG_5879.jpeg",
-    title: "Set 9",
-    tags: ["Square", "French"],
+    src: "/portfolio/FunNails4.jpeg",
+    title: "Fun Nails 4",
+    fileName: "FunNails4.jpeg",
     focal: "50% 40%",
   },
   {
-    src: "/portfolio/IMG_5890.jpeg",
-    title: "Set 10",
-    tags: ["Almond", "Aura"],
+    src: "/portfolio/FunNails5.jpeg",
+    title: "Fun Nails 5",
+    fileName: "FunNails5.jpeg",
     focal: "50% 45%",
   },
   {
-    src: "/portfolio/IMG_5891.jpeg",
-    title: "Set 11",
-    tags: ["Square", "Cat Eye"],
+    src: "/portfolio/IsolatedChromeNails1.jpeg",
+    title: "Isolated Chrome Nails 1",
+    fileName: "IsolatedChromeNails1.jpeg",
     focal: "50% 42%",
   },
   {
-    src: "/portfolio/IMG_5894.jpeg",
-    title: "Set 12",
-    tags: ["Almond", "Chrome"],
+    src: "/portfolio/Ombre1.jpeg",
+    title: "Ombre 1",
+    fileName: "Ombre1.jpeg",
     focal: "50% 43%",
   },
 ];
 
 const tags: PortfolioTag[] = [
   "All",
-  "Almond",
-  "Square",
+  "Aura",
+  "Blooming",
+  "Fun",
+  "Fruit",
+  "Ombre",
   "French",
   "Chrome",
-  "Aura",
   "Cat Eye",
 ];
+
+const fileNameMatchers: Record<Exclude<PortfolioTag, "All">, string[]> = {
+  Aura: ["aura"],
+  Blooming: ["blooming"],
+  Fun: ["fun"],
+  Fruit: ["fruit"],
+  Ombre: ["ombre"],
+  French: ["french"],
+  Chrome: ["chrome"],
+  "Cat Eye": ["cateye", "cat_eye", "cat-eye", "cat eye"],
+};
+
+function normalizeFileName(fileName: string): string {
+  return fileName.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function imageMatchesTag(fileName: string, tag: Exclude<PortfolioTag, "All">): boolean {
+  const normalized = normalizeFileName(fileName);
+  const terms = fileNameMatchers[tag];
+  return terms.some((term) => normalized.includes(normalizeFileName(term)));
+}
 
 export function PortfolioShowcase() {
   const [activeTag, setActiveTag] = useState<PortfolioTag>("All");
@@ -121,7 +146,7 @@ export function PortfolioShowcase() {
     () =>
       activeTag === "All"
         ? portfolioImages
-        : portfolioImages.filter((item) => item.tags.includes(activeTag)),
+        : portfolioImages.filter((item) => imageMatchesTag(item.fileName, activeTag)),
     [activeTag]
   );
 
@@ -221,9 +246,7 @@ export function PortfolioShowcase() {
               <div className="flex items-center justify-between p-4">
                 <div>
                   <p className="font-serif text-xl text-rose-red">{activeImage.title}</p>
-                  <p className="text-muted-foreground text-sm">
-                    {activeImage.tags.join(" • ")}
-                  </p>
+                  <p className="text-muted-foreground text-sm">{activeImage.fileName}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
