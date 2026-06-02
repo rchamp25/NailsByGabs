@@ -13,6 +13,7 @@ export type AppointmentSlot = {
   end_at: string;
   status: "open" | "booked";
   booked_by: string | null;
+  booked_name: string | null;
   notes: string | null;
   created_at: string;
 };

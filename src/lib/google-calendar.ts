@@ -56,6 +56,7 @@ type SlotRow = {
   start_at: string;
   end_at: string;
   status: string;
+  booked_name: string | null;
   notes: string | null;
   google_event_id: string | null;
   booker: { full_name: string } | { full_name: string }[] | null;
@@ -71,6 +72,7 @@ async function getSlot(slotId: string): Promise<SlotRow | null> {
       start_at,
       end_at,
       status,
+      booked_name,
       notes,
       google_event_id,
       booker:profiles!booked_by ( full_name )
@@ -84,6 +86,7 @@ async function getSlot(slotId: string): Promise<SlotRow | null> {
 
 function getEventTitle(slot: SlotRow): string {
   if (slot.status === "open") return "NailsByGabs — Open slot";
+  if (slot.booked_name) return formatOwnerSlotLabel(slot.booked_name);
   const bookerRaw = slot.booker;
   const booker = Array.isArray(bookerRaw) ? bookerRaw[0] : bookerRaw;
   return formatOwnerSlotLabel(booker?.full_name ?? "Client");

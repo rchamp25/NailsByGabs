@@ -35,6 +35,8 @@ export async function createSlot(formData: FormData) {
 
   const startRaw = String(formData.get("startAt") ?? "");
   const endRaw = String(formData.get("endAt") ?? "");
+  const preBooked = String(formData.get("preBooked") ?? "") === "on";
+  const bookedName = String(formData.get("bookedName") ?? "").trim();
   const startAt = new Date(startRaw);
   const endAt = new Date(endRaw);
 
@@ -44,6 +46,9 @@ export async function createSlot(formData: FormData) {
   if (endAt <= startAt) {
     return { error: "End time must be after start time." };
   }
+  if (preBooked && !bookedName) {
+    return { error: "Enter a client name for pre-booked slots." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -51,7 +56,9 @@ export async function createSlot(formData: FormData) {
     .insert({
       start_at: startAt.toISOString(),
       end_at: endAt.toISOString(),
-      status: "open",
+      status: preBooked ? "booked" : "open",
+      booked_by: null,
+      booked_name: preBooked ? bookedName : null,
     })
     .select("id")
     .single();
@@ -101,7 +108,7 @@ export async function releaseSlot(slotId: string) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("appointment_slots")
-    .update({ status: "open", booked_by: null, notes: null })
+    .update({ status: "open", booked_by: null, booked_name: null, notes: null })
     .eq("id", slotId);
 
   if (error) {

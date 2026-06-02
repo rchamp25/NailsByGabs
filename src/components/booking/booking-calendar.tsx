@@ -57,6 +57,7 @@ export function BookingCalendar({
   const [selectedSlot, setSelectedSlot] = useState<SlotWithBooker | null>(null);
   const [bookTarget, setBookTarget] = useState<SlotWithBooker | null>(null);
   const [justBookedSlot, setJustBookedSlot] = useState<SlotWithBooker | null>(null);
+  const [preBooked, setPreBooked] = useState(false);
   const [notes, setNotes] = useState("");
   const [bookError, setBookError] = useState<string | null>(null);
 
@@ -106,6 +107,7 @@ export function BookingCalendar({
 
   function getOwnerLabel(slot: SlotWithBooker): string {
     if (slot.status === "open") return "Open slot";
+    if (slot.booked_name) return formatOwnerSlotLabel(slot.booked_name);
     const name = slot.booker?.full_name ?? "Client";
     return formatOwnerSlotLabel(name);
   }
@@ -159,6 +161,29 @@ export function BookingCalendar({
                   <Label htmlFor="endAt">Ends</Label>
                   <Input id="endAt" name="endAt" type="datetime-local" required />
                 </div>
+                <div className="sm:col-span-2 flex items-center gap-2">
+                  <input
+                    id="preBooked"
+                    name="preBooked"
+                    type="checkbox"
+                    checked={preBooked}
+                    onChange={(event) => setPreBooked(event.target.checked)}
+                    className="h-4 w-4 rounded border-border text-rose-red focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
+                  />
+                  <Label htmlFor="preBooked" className="font-normal">
+                    Create as already taken
+                  </Label>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="bookedName">Client name (for taken slot)</Label>
+                  <Input
+                    id="bookedName"
+                    name="bookedName"
+                    placeholder="e.g. Maddy Brown"
+                    disabled={!preBooked}
+                    required={preBooked}
+                  />
+                </div>
                 {createState?.error && (
                   <p className="text-sm text-rose-red sm:col-span-2" role="alert">
                     {createState.error}
@@ -169,7 +194,11 @@ export function BookingCalendar({
                   disabled={createPending}
                   className="sm:col-span-2 sm:w-fit"
                 >
-                  {createPending ? "Adding…" : "Add slot"}
+                  {createPending
+                    ? "Adding…"
+                    : preBooked
+                      ? "Add taken appointment"
+                      : "Add open slot"}
                 </Button>
               </form>
             </CardContent>
