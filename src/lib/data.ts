@@ -17,58 +17,49 @@ export const serviceCategories: {
   items: ServiceItem[];
 }[] = [
   {
-    title: "Acrylics",
+    title: "GELX",
     items: [
-      { name: "Full Set — Short", price: "$45" },
-      { name: "Full Set — Medium", price: "$55" },
-      { name: "Full Set — Long", price: "$65" },
-      { name: "Overlay", price: "$50" },
+      { name: "Extra Short Almond", price: "$28" },
+      { name: "Short Almond", price: "$28" },
+      { name: "Medium Almond", price: "$28" },
+      { name: "Short Square", price: "$28" },
+      { name: "Full French", price: "$33" },
+      { name: "Gel Manicure", price: "$20" },
     ],
   },
   {
-    title: "Gel-X",
+    title: "Extras",
     items: [
-      { name: "Soft Gel Extensions", price: "$60" },
-      { name: "Gel-X with Simple Art", price: "$70" },
-      { name: "Gel-X Premium Design", price: "$85+", note: "Price varies by design" },
-    ],
-  },
-  {
-    title: "Fills",
-    items: [
-      { name: "Acrylic Fill — 2 weeks", price: "$40" },
-      { name: "Acrylic Fill — 3 weeks", price: "$45" },
-      { name: "Gel Fill", price: "$45" },
-    ],
-  },
-  {
-    title: "Add-ons / Nail Art",
-    items: [
-      { name: "Simple Art (per nail)", price: "$3+" },
-      { name: "Charms / 3D Elements", price: "$5+" },
-      { name: "Chrome / Cat Eye", price: "$10" },
-      { name: "Removal (non-client)", price: "$15" },
+      { name: "Cat eye Full Set", price: "$32" },
+      { name: "Full Chrome", price: "+$3" },
+      { name: "Isolated Chrome", price: "+$3" },
+      {
+        name: "Extra Shaping and Sizing (applies to square sets only)",
+        price: "+$3",
+      },
+      { name: "Blooming Gel", price: "+$3" },
+      { name: "Gems", price: "+$0.50 per Gem" },
+      { name: "Aura Full Set", price: "$36" },
+      { name: "Glitter Top Coat", price: "+$2" },
     ],
   },
 ];
 
 export const aboutContent = {
-  bio: `Welcome to NailsByGabs — where every set is crafted with care, precision, and a touch of luxury. Gabs specializes in long-lasting acrylics, flawless Gel-X extensions, and custom nail art that turns your vision into wearable art.
+  bio: `Hi my name is Gabrielle, but most people know me as gabs! I work with and apply Gel X nails in the Rochester, NY area, specifically Webster, NY and also SUNY Binghamton during the school year.
 
-Whether you want a clean everyday nude or a bold statement set, you'll leave feeling polished, confident, and photo-ready.`,
-  hours: [
-    { day: "Tuesday – Friday", time: "10:00 AM – 7:00 PM" },
-    { day: "Saturday", time: "9:00 AM – 5:00 PM" },
-    { day: "Sunday – Monday", time: "Closed" },
-  ],
+While I love doing all kinds of nails, my favorite sets are ones with lots of color, that allow me to express my creativity.
+
+Doing nails is way for me to be creative, have fun, and most of all make all of my clients feel loved and happy with their nails!`,
   location: {
-    address: "123 Blossom Lane, Suite 4",
-    city: "Your City, ST 00000",
-    phone: "(555) 123-4567",
-    email: "hello@nailsbygabs.com",
+    address: "Rochester, NY area",
+    city: "Webster, NY + SUNY Binghamton (school year)",
+    phone: "",
+    email: "",
   },
   social: {
-    instagram: "https://instagram.com/nailsbygabs",
-    tiktok: "https://tiktok.com/@nailsbygabs",
+    instagram:
+      "https://www.instagram.com/_nails.bygabs?igsh=bHB1Y3I1bzVyZThw&utm_source=qr",
+    tiktok: "https://www.tiktok.com/@_nails.bygabs?_r=1&_t=ZP-96sKyUFOHct",
   },
 };

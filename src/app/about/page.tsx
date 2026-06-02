@@ -1,5 +1,6 @@
-import { Instagram, MapPin, Clock, Mail, Phone } from "lucide-react";
+import { Instagram, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { aboutContent } from "@/lib/data";
 
 export default function AboutPage() {
-  const { bio, hours, location, social } = aboutContent;
+  const { bio, location, social } = aboutContent;
 
   return (
     <>
@@ -15,18 +16,14 @@ export default function AboutPage() {
       <div className="flex flex-1 flex-col gap-8 p-4 md:p-8">
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
           <div className="relative aspect-[4/5] max-h-[520px] overflow-hidden rounded-2xl border border-gold/40 shadow-lg lg:max-h-none">
-            <div
-              className="absolute inset-0 bg-gradient-to-br from-pastel-pink via-pastel-pink-deep/70 to-rose-red/30"
-              aria-hidden
+            <Image
+              src="/about/HeadshotGabrielle.jpeg"
+              alt="Gabrielle from NailsByGabs"
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-cover object-center"
+              priority
             />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-8 text-center">
-              <span className="font-serif text-2xl text-rose-red-deep">
-                Professional Photo
-              </span>
-              <span className="text-muted-foreground text-sm">
-                Replace with headshot or studio image
-              </span>
-            </div>
           </div>
 
           <div className="flex flex-col gap-6">
@@ -46,22 +43,6 @@ export default function AboutPage() {
             <Card className="border-gold/25 py-4">
               <CardContent className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <Clock className="mt-0.5 size-5 shrink-0 text-gold" />
-                  <div>
-                    <p className="font-medium">Hours</p>
-                    <ul className="text-muted-foreground mt-1 space-y-1 text-sm">
-                      {hours.map((h) => (
-                        <li key={h.day}>
-                          <span className="text-foreground">{h.day}</span>
-                          {" — "}
-                          {h.time}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
                   <MapPin className="mt-0.5 size-5 shrink-0 text-gold" />
                   <div>
                     <p className="font-medium">Location</p>
@@ -80,13 +61,6 @@ export default function AboutPage() {
                   >
                     <Phone className="size-4 text-gold" />
                     {location.phone}
-                  </a>
-                  <a
-                    href={`mailto:${location.email}`}
-                    className="text-muted-foreground hover:text-rose-red flex items-center gap-2 transition-colors"
-                  >
-                    <Mail className="size-4 text-gold" />
-                    {location.email}
                   </a>
                 </div>
               </CardContent>
