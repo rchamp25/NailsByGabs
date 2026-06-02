@@ -29,8 +29,8 @@
   --color-pastel-pink-deep: #f8bbd9;
   --color-rose-red: #c62828;
   --color-rose-red-deep: #8e0000;
-  --color-gold: #c9a227;
-  --color-gold-light: #e8d48b;
+  --color-gold: #8ccf9b;
+  --color-gold-light: #ccefd4;
 
   --font-sans: var(--font-dm-sans);
   --font-serif: var(--font-cormorant);
@@ -68,7 +68,7 @@
   --sidebar-accent: #fce4ec;
   --sidebar-accent-foreground: #8e0000;
   --sidebar-border: #f0d4dc;
-  --sidebar-ring: #c9a227;
+  --sidebar-ring: #8ccf9b;
 }
 
 @layer base {
@@ -153,7 +153,7 @@
     background: linear-gradient(
       165deg,
       #fff8fa 0%,
-      #fce4ec 45%,
+      #f1fbf3 45%,
       #fff5f8 100%
     );
   }
@@ -280,6 +280,54 @@
   }
 }
 
+@keyframes floral-drift {
+  from {
+    transform: translateY(0) translateX(0) rotate(0deg);
+  }
+  to {
+    transform: translateY(-18px) translateX(12px) rotate(4deg);
+  }
+}
+
+.sidebar-floral-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-floral-bg::before,
+.sidebar-floral-bg::after {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+  background-repeat: repeat;
+  animation: floral-drift 14s ease-in-out infinite alternate;
+}
+
+.sidebar-floral-bg::before {
+  background-image:
+    radial-gradient(circle at 22% 18%, rgb(140 207 155 / 0.18) 0 24px, transparent 25px),
+    radial-gradient(circle at 72% 36%, rgb(248 187 217 / 0.16) 0 20px, transparent 21px),
+    radial-gradient(circle at 46% 74%, rgb(140 207 155 / 0.12) 0 16px, transparent 17px),
+    radial-gradient(circle at 86% 76%, rgb(248 187 217 / 0.1) 0 12px, transparent 13px);
+}
+
+.sidebar-floral-bg::after {
+  background-image:
+    radial-gradient(circle at 14% 62%, rgb(140 207 155 / 0.12) 0 14px, transparent 15px),
+    radial-gradient(circle at 58% 20%, rgb(204 239 212 / 0.22) 0 10px, transparent 11px),
+    radial-gradient(circle at 92% 48%, rgb(140 207 155 / 0.16) 0 18px, transparent 19px);
+  animation-duration: 18s;
+  animation-direction: alternate-reverse;
+}
+
+.sidebar-floral-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-page-enter,
   .animate-portfolio-item,
@@ -296,5 +344,9 @@
   }
   .gold-ring-hover:hover {
     transform: none;
+  }
+  .sidebar-floral-bg::before,
+  .sidebar-floral-bg::after {
+    animation: none !important;
   }
 }
