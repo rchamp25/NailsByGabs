@@ -7,6 +7,7 @@ import {
   deleteGoogleCalendarEvent,
   syncSlotToGoogleCalendar,
 } from "@/lib/google-calendar";
+import { parseBusinessDateTimeLocal } from "@/lib/business-timezone";
 import { notifyOwnerOfBooking } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/server";
 
@@ -37,8 +38,8 @@ export async function createSlot(formData: FormData) {
   const endRaw = String(formData.get("endAt") ?? "");
   const preBooked = String(formData.get("preBooked") ?? "") === "on";
   const bookedName = String(formData.get("bookedName") ?? "").trim();
-  const startAt = new Date(startRaw);
-  const endAt = new Date(endRaw);
+  const startAt = parseBusinessDateTimeLocal(startRaw);
+  const endAt = parseBusinessDateTimeLocal(endRaw);
 
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
     return { error: "Invalid date or time." };

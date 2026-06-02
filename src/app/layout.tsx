@@ -20,7 +20,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "NailsByGabs | Premium Nail Artistry",
+  title: "NailsByGabs | GelX Nails",
   description:
     "Luxury nail salon — portfolio, booking, services, and more. Book your appointment with Gabs today.",
   icons: {

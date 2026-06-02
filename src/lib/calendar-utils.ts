@@ -1,3 +1,5 @@
+import { getBusinessDateTimeFormatOptions } from "@/lib/business-timezone";
+
 export function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -81,8 +83,11 @@ export function formatDayHeader(date: Date): string {
 }
 
 export function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(iso));
+  return new Intl.DateTimeFormat(
+    "en-US",
+    getBusinessDateTimeFormatOptions({
+      hour: "numeric",
+      minute: "2-digit",
+    })
+  ).format(new Date(iso));
 }

@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { formatBusinessDayKey } from "@/lib/business-timezone";
 import { cn } from "@/lib/utils";
 import {
   formatDayHeader,
-  formatDayKey,
   formatMonthYear,
   formatTime,
   formatWeekRange,
@@ -51,13 +51,13 @@ export function AppointmentCalendarGrid({
 
   const periodKey =
     view === "week"
-      ? formatDayKey(startOfWeek(anchor))
+      ? formatBusinessDayKey(startOfWeek(anchor))
       : `${anchor.getFullYear()}-${anchor.getMonth()}`;
 
   const slotsByDay = useMemo(() => {
     const map = new Map<string, SlotWithBooker[]>();
     for (const slot of slots) {
-      const key = formatDayKey(new Date(slot.start_at));
+      const key = formatBusinessDayKey(slot.start_at);
       const list = map.get(key) ?? [];
       list.push(slot);
       map.set(key, list);
@@ -203,7 +203,7 @@ export function AppointmentCalendarGrid({
       {view === "week" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
           {getWeekDays(anchor).map((day) => {
-            const key = formatDayKey(day);
+            const key = formatBusinessDayKey(day);
             const daySlots = slotsByDay.get(key) ?? [];
             const isToday = isSameDay(day, new Date());
 
@@ -243,7 +243,7 @@ export function AppointmentCalendarGrid({
           </div>
           <div className="grid grid-cols-7 gap-1">
             {getMonthGridDays(anchor).map((day) => {
-              const key = formatDayKey(day);
+              const key = formatBusinessDayKey(day);
               const daySlots = slotsByDay.get(key) ?? [];
               const inMonth = day.getMonth() === anchor.getMonth();
               const isToday = isSameDay(day, new Date());

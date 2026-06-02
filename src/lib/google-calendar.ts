@@ -1,7 +1,8 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { toGoogleCalendarDateTime } from "@/lib/business-timezone";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
+import { createClient } from "@/lib/supabase/server";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3/calendars";
@@ -116,8 +117,8 @@ export async function syncSlotToGoogleCalendar(
   const body = {
     summary: getEventTitle(slot),
     description: getEventDescription(slot),
-    start: { dateTime: slot.start_at },
-    end: { dateTime: slot.end_at },
+    start: toGoogleCalendarDateTime(slot.start_at),
+    end: toGoogleCalendarDateTime(slot.end_at),
   };
 
   const calendarBase = `${GOOGLE_CALENDAR_API}/${encodeURIComponent(integration.calendarId)}/events`;
