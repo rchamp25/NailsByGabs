@@ -17,8 +17,15 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
    - **Redirect URLs:** add both:
      - `https://your-app.vercel.app/auth/callback`
      - `http://localhost:3000/auth/callback` (for local dev only)
-5. **Friendly confirmation emails:** In **Authentication → Email Templates → Confirm signup**, paste the HTML from `supabase/email-templates/confirm-signup.html`. Set the subject to `Confirm your NailsByGabs account`.
+5. **Email confirmation (recommended after SMTP):** By default, turn **off** confirm email while Supabase’s built-in mail limit is an issue:
+   - **Authentication → Providers → Email** → disable **Confirm email**
+   - New signups can book immediately without a verification link.
+   - When **Resend SMTP** is configured (see below), turn **Confirm email** back on and restore the confirm template from `supabase/email-templates/confirm-signup.html` (subject: `Confirm your NailsByGabs account`).
 6. Copy **Project URL** and **anon public** key into `.env.local` (see `.env.example`).
+
+### Auth email via Resend SMTP (when ready)
+
+In Supabase **Project Settings → Authentication → SMTP**: host `smtp.resend.com`, port `465`, user `resend`, password = your Resend API key, sender = a verified domain address. Then re-enable **Confirm email** in **Authentication → Providers → Email**.
 
 ### 2. Local dev
 

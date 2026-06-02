@@ -48,13 +48,12 @@ export async function signUp(
     revalidatePath("/", "layout");
 
     if (data.session) {
-      return { success: true };
+      redirect("/book");
     }
 
     return {
       success: true,
-      message:
-        "Account created! Check your email to confirm your NailsByGabs account, then sign in to book.",
+      message: "Account created! Sign in to book your appointment.",
     };
   } catch (err) {
     return {
