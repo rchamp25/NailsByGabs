@@ -1,96 +1,24 @@
-import Image from "next/image";
-
 import { SiteHeader } from "@/components/site-header";
-import { cn } from "@/lib/utils";
-
-const portfolioImages = [
-  "/portfolio/IMG_5264.jpeg",
-  "/portfolio/IMG_5268.jpeg",
-  "/portfolio/IMG_5397.jpeg",
-  "/portfolio/IMG_5443.jpeg",
-  "/portfolio/IMG_5526.jpeg",
-  "/portfolio/IMG_5654.jpeg",
-  "/portfolio/IMG_5819.jpeg",
-  "/portfolio/IMG_5851.jpeg",
-  "/portfolio/IMG_5879.jpeg",
-  "/portfolio/IMG_5890.jpeg",
-  "/portfolio/IMG_5891.jpeg",
-  "/portfolio/IMG_5894.jpeg",
-] as const;
-
-const imageAltText = [
-  "NailsByGabs portfolio set 1",
-  "NailsByGabs portfolio set 2",
-  "NailsByGabs portfolio set 3",
-  "NailsByGabs portfolio set 4",
-  "NailsByGabs portfolio set 5",
-  "NailsByGabs portfolio set 6",
-  "NailsByGabs portfolio set 7",
-  "NailsByGabs portfolio set 8",
-  "NailsByGabs portfolio set 9",
-  "NailsByGabs portfolio set 10",
-  "NailsByGabs portfolio set 11",
-  "NailsByGabs portfolio set 12",
-] as const;
-
-const overlayByIndex: Record<number, string> = {
-  0: "from-rose-red/10 via-transparent to-transparent",
-  1: "from-transparent via-transparent to-rose-red/10",
-};
-
-const overlayClass = (index: number): string =>
-  overlayByIndex[index % 2] ?? "from-transparent via-transparent to-transparent";
+import { PortfolioShowcase } from "@/components/portfolio/portfolio-showcase";
 
 export default function PortfolioPage() {
   return (
     <>
       <SiteHeader title="Portfolio" />
-      <div className="flex flex-1 flex-col gap-8 p-4 md:p-8">
-        <div className="max-w-2xl">
-          <p className="text-muted-foreground text-sm uppercase tracking-widest text-gold">
+      <div className="main-floral-accent flex flex-1 flex-col gap-8 p-4 md:p-8">
+        <div className="max-w-3xl">
+          <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-gold">
             Nail Art Gallery
           </p>
-          <h2 className="font-serif mt-1 text-3xl text-rose-red md:text-4xl">
+          <h2 className="font-serif mt-1 text-3xl text-rose-red md:text-5xl">
             Sets crafted with love
           </h2>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed md:text-base">
-            A curated look at recent work by NailsByGabs.
+          <p className="text-muted-foreground rhythm-copy mt-3 text-sm leading-relaxed md:text-base">
+            Explore a curated collection of recent sets. Use filters to find your
+            vibe, then tap any image for a full-screen hero preview.
           </p>
         </div>
-
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:gap-5">
-          {portfolioImages.map((imageSrc, index) => (
-            <figure
-              key={imageSrc}
-              className="gold-ring-hover animate-portfolio-item group relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-pastel-pink/10"
-              style={{ animationDelay: `${index * 70}ms` }}
-            >
-              <Image
-                src={imageSrc}
-                alt={imageAltText[index]}
-                fill
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 400px"
-                className="object-contain object-center p-1 transition-transform duration-500 ease-emphasis group-hover:scale-[1.01]"
-                priority={index < 3}
-              />
-              <div
-                className={cn(
-                  "absolute inset-0 bg-gradient-to-b",
-                  overlayClass(index)
-                )}
-                aria-hidden
-              />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent p-3">
-                <span className="text-sm font-medium text-white drop-shadow-sm">
-                  NailsByGabs Set {index + 1}
-                </span>
-              </div>
-              <figcaption className="sr-only">
-                {imageAltText[index]}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
+        <PortfolioShowcase />
       </div>
     </>
   );

@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Trash2, Undo2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, Sparkles, Trash2, Undo2 } from "lucide-react";
 
 import {
   bookSlot,
@@ -56,6 +56,7 @@ export function BookingCalendar({
   const [pending, startTransition] = useTransition();
   const [selectedSlot, setSelectedSlot] = useState<SlotWithBooker | null>(null);
   const [bookTarget, setBookTarget] = useState<SlotWithBooker | null>(null);
+  const [justBookedSlot, setJustBookedSlot] = useState<SlotWithBooker | null>(null);
   const [notes, setNotes] = useState("");
   const [bookError, setBookError] = useState<string | null>(null);
 
@@ -76,11 +77,13 @@ export function BookingCalendar({
   async function handleBook() {
     if (!bookTarget) return;
     setBookError(null);
+    const booked = bookTarget;
     const result = await bookSlot(bookTarget.id, notes);
     if (result?.error) {
       setBookError(result.error);
       return;
     }
+    setJustBookedSlot(booked);
     setBookTarget(null);
     setNotes("");
     setSelectedSlot(null);
@@ -121,6 +124,10 @@ export function BookingCalendar({
   const activeSlot = selectedSlot;
   const isMine = activeSlot?.booked_by === userId;
   const isOpen = activeSlot?.status === "open";
+  const nextOpenSlot =
+    !isOwner && !bookTarget
+      ? slots.find((slot) => slot.status === "open") ?? null
+      : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -207,6 +214,32 @@ export function BookingCalendar({
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {!isOwner && justBookedSlot && (
+        <Card className="border-gold/45 bg-card/90 micro-pop">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-rose-red">
+              <CheckCircle2 className="size-5 text-gold" />
+              You&apos;re booked!
+            </CardTitle>
+            <CardDescription>
+              Next step: save this appointment in Google Calendar so you never miss it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm text-foreground">
+              {formatSlotRange(justBookedSlot.start_at, justBookedSlot.end_at)}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <AddToCalendarButtons slot={justBookedSlot} />
+              <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                <Sparkles className="size-3 text-gold" />
+                Google Calendar is the fastest option.
+              </span>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -362,6 +395,20 @@ export function BookingCalendar({
           </div>
         </DialogContent>
       </Dialog>
+
+      {!isOwner && nextOpenSlot && (
+        <div className="fixed inset-x-0 bottom-3 z-40 px-4 md:hidden">
+          <Button
+            className="w-full rounded-full shadow-lg shadow-rose-red/15"
+            onClick={() => {
+              setSelectedSlot(nextOpenSlot);
+              setBookTarget(nextOpenSlot);
+            }}
+          >
+            Book next available spot
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

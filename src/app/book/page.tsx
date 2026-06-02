@@ -75,15 +75,15 @@ export default async function BookPage({
   return (
     <>
       <SiteHeader title="Book Appointment" />
-      <div className="flex flex-1 flex-col gap-6 p-4 md:p-8">
-        <div className="max-w-2xl">
-          <p className="text-muted-foreground text-sm uppercase tracking-widest text-gold">
+      <div className="main-floral-accent flex flex-1 flex-col gap-6 p-4 pb-24 md:p-8 md:pb-8">
+        <div className="max-w-3xl">
+          <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-gold">
             Appointment calendar
           </p>
-          <h2 className="font-serif mt-1 text-3xl text-rose-red md:text-4xl">
+          <h2 className="font-serif mt-1 text-3xl text-rose-red md:text-5xl">
             Reserve your spot
           </h2>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed md:text-base">
+          <p className="text-muted-foreground rhythm-copy mt-3 text-sm leading-relaxed md:text-base">
             {profile?.role === "owner"
               ? "Add open time slots for clients. Booked appointments show client names."
               : "Choose an open slot and add notes for special requests. Other booked times appear as Taken."}
