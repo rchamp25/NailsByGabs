@@ -21,13 +21,15 @@ type PortfolioTag =
   | "Ombre"
   | "French"
   | "Chrome"
-  | "Cat Eye";
+  | "Cat Eye"
+  | "3D";
 
 type PortfolioImage = {
   src: string;
   title: string;
   fileName: string;
   focal: string;
+  tags: Exclude<PortfolioTag, "All">[];
 };
 
 const portfolioFileNames = [
@@ -62,10 +64,6 @@ const portfolioFileNames = [
   "Square1.jpeg",
 ] as const;
 
-function titleFromFileName(fileName: string): string {
-  return fileName.replace(/\.[^.]+$/, "").replace(/([a-z])([A-Z0-9])/g, "$1 $2");
-}
-
 const focalByFileName: Record<string, string> = {
   "3DGelNails.jpeg": "50% 40%",
   "AuraNails1.jpeg": "50% 45%",
@@ -81,13 +79,6 @@ const focalByFileName: Record<string, string> = {
   "Ombre1.jpeg": "50% 43%",
 };
 
-const portfolioImages: PortfolioImage[] = portfolioFileNames.map((fileName) => ({
-  src: `/portfolio/${fileName}`,
-  title: titleFromFileName(fileName),
-  fileName,
-  focal: focalByFileName[fileName] ?? "50% 45%",
-}));
-
 const tags: PortfolioTag[] = [
   "All",
   "Aura",
@@ -98,17 +89,19 @@ const tags: PortfolioTag[] = [
   "French",
   "Chrome",
   "Cat Eye",
+  "3D",
 ];
 
 const fileNameMatchers: Record<Exclude<PortfolioTag, "All">, string[]> = {
   Aura: ["aura"],
-  Blooming: ["blooming"],
+  Blooming: ["blooming", "bloom"],
   Fun: ["fun"],
   Fruit: ["fruit"],
   Ombre: ["ombre"],
   French: ["french"],
   Chrome: ["chrome"],
   "Cat Eye": ["cateye", "cat_eye", "cat-eye", "cat eye"],
+  "3D": ["3d"],
 };
 
 function normalizeFileName(fileName: string): string {
@@ -121,6 +114,43 @@ function imageMatchesTag(fileName: string, tag: Exclude<PortfolioTag, "All">): b
   return terms.some((term) => normalized.includes(normalizeFileName(term)));
 }
 
+function detectTags(fileName: string): Exclude<PortfolioTag, "All">[] {
+  return (Object.keys(fileNameMatchers) as Exclude<PortfolioTag, "All">[]).filter(
+    (tag) => imageMatchesTag(fileName, tag)
+  );
+}
+
+function prettifyType(raw: string): string {
+  const cleaned = raw.replace(/\d+/g, "");
+  if (!cleaned) return "";
+  const normalized = normalizeFileName(cleaned);
+  const matchedTag = (Object.keys(fileNameMatchers) as Exclude<PortfolioTag, "All">[]).find(
+    (tag) =>
+      fileNameMatchers[tag].some((term) =>
+        normalized.includes(normalizeFileName(term))
+      )
+  );
+  if (matchedTag) return matchedTag;
+  return cleaned.replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+}
+
+function titleFromFileName(fileName: string): string {
+  const base = fileName.replace(/\.[^.]+$/, "");
+  const parts = base.split("W").map(prettifyType).filter(Boolean);
+  if (parts.length === 0) return base.replace(/\d+/g, "");
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} & ${parts[1]}`;
+  return parts.join(", ");
+}
+
+const portfolioImages: PortfolioImage[] = portfolioFileNames.map((fileName) => ({
+  src: `/portfolio/${fileName}`,
+  title: titleFromFileName(fileName),
+  fileName,
+  focal: focalByFileName[fileName] ?? "50% 45%",
+  tags: detectTags(fileName),
+}));
+
 export function PortfolioShowcase() {
   const [activeTag, setActiveTag] = useState<PortfolioTag>("All");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -129,7 +159,7 @@ export function PortfolioShowcase() {
     () =>
       activeTag === "All"
         ? portfolioImages
-        : portfolioImages.filter((item) => imageMatchesTag(item.fileName, activeTag)),
+        : portfolioImages.filter((item) => item.tags.includes(activeTag)),
     [activeTag]
   );
 
@@ -229,7 +259,11 @@ export function PortfolioShowcase() {
               <div className="flex items-center justify-between p-4">
                 <div>
                   <p className="font-serif text-xl text-rose-red">{activeImage.title}</p>
-                  <p className="text-muted-foreground text-sm">{activeImage.fileName}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {activeImage.tags.length > 0
+                      ? activeImage.tags.join(" • ")
+                      : "NailsByGabs set"}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
