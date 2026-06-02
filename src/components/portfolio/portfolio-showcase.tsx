@@ -30,80 +30,63 @@ type PortfolioImage = {
   focal: string;
 };
 
-const portfolioImages: PortfolioImage[] = [
-  {
-    src: "/portfolio/3DGelNails.jpeg",
-    title: "3D Gel Nails",
-    fileName: "3DGelNails.jpeg",
-    focal: "50% 40%",
-  },
-  {
-    src: "/portfolio/AuraNails1.jpeg",
-    title: "Aura Nails 1",
-    fileName: "AuraNails1.jpeg",
-    focal: "50% 45%",
-  },
-  {
-    src: "/portfolio/BloomingGel.jpeg",
-    title: "Blooming Gel",
-    fileName: "BloomingGel.jpeg",
-    focal: "52% 42%",
-  },
-  {
-    src: "/portfolio/FrenchWChrome.jpeg",
-    title: "French with Chrome",
-    fileName: "FrenchWChrome.jpeg",
-    focal: "50% 42%",
-  },
-  {
-    src: "/portfolio/FruitNails1.jpeg",
-    title: "Fruit Nails 1",
-    fileName: "FruitNails1.jpeg",
-    focal: "50% 38%",
-  },
-  {
-    src: "/portfolio/FunNails1.jpeg",
-    title: "Fun Nails 1",
-    fileName: "FunNails1.jpeg",
-    focal: "50% 45%",
-  },
-  {
-    src: "/portfolio/FunNails2.jpeg",
-    title: "Fun Nails 2",
-    fileName: "FunNails2.jpeg",
-    focal: "50% 46%",
-  },
-  {
-    src: "/portfolio/FunNails3.jpeg",
-    title: "Fun Nails 3",
-    fileName: "FunNails3.jpeg",
-    focal: "50% 44%",
-  },
-  {
-    src: "/portfolio/FunNails4.jpeg",
-    title: "Fun Nails 4",
-    fileName: "FunNails4.jpeg",
-    focal: "50% 40%",
-  },
-  {
-    src: "/portfolio/FunNails5.jpeg",
-    title: "Fun Nails 5",
-    fileName: "FunNails5.jpeg",
-    focal: "50% 45%",
-  },
-  {
-    src: "/portfolio/IsolatedChromeNails1.jpeg",
-    title: "Isolated Chrome Nails 1",
-    fileName: "IsolatedChromeNails1.jpeg",
-    focal: "50% 42%",
-  },
-  {
-    src: "/portfolio/Ombre1.jpeg",
-    title: "Ombre 1",
-    fileName: "Ombre1.jpeg",
-    focal: "50% 43%",
-  },
-];
+const portfolioFileNames = [
+  "3DGelNails.jpeg",
+  "3DWFun.jpeg",
+  "AuraNails1.jpeg",
+  "Aura2.jpeg",
+  "Aura3.jpeg",
+  "BloomingGel.jpeg",
+  "BloomWAura.jpeg",
+  "CatEye1.jpeg",
+  "FrenchWChrome.jpeg",
+  "French2.jpeg",
+  "FruitNails1.jpeg",
+  "Fruit2.jpeg",
+  "Fruit3.jpeg",
+  "Fruit4.jpeg",
+  "FunNails1.jpeg",
+  "FunNails2.jpeg",
+  "FunNails3.jpeg",
+  "FunNails4.jpeg",
+  "FunNails5.jpeg",
+  "Fun6.jpeg",
+  "Fun7.jpeg",
+  "Fun8.jpeg",
+  "Fun9.jpeg",
+  "Fun10.jpeg",
+  "Fun11W3D.jpeg",
+  "FunW3D.jpeg",
+  "IsolatedChromeNails1.jpeg",
+  "Ombre1.jpeg",
+  "Square1.jpeg",
+] as const;
+
+function titleFromFileName(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, "").replace(/([a-z])([A-Z0-9])/g, "$1 $2");
+}
+
+const focalByFileName: Record<string, string> = {
+  "3DGelNails.jpeg": "50% 40%",
+  "AuraNails1.jpeg": "50% 45%",
+  "BloomingGel.jpeg": "52% 42%",
+  "FrenchWChrome.jpeg": "50% 42%",
+  "FruitNails1.jpeg": "50% 38%",
+  "FunNails1.jpeg": "50% 45%",
+  "FunNails2.jpeg": "50% 46%",
+  "FunNails3.jpeg": "50% 44%",
+  "FunNails4.jpeg": "50% 40%",
+  "FunNails5.jpeg": "50% 45%",
+  "IsolatedChromeNails1.jpeg": "50% 42%",
+  "Ombre1.jpeg": "50% 43%",
+};
+
+const portfolioImages: PortfolioImage[] = portfolioFileNames.map((fileName) => ({
+  src: `/portfolio/${fileName}`,
+  title: titleFromFileName(fileName),
+  fileName,
+  focal: focalByFileName[fileName] ?? "50% 45%",
+}));
 
 const tags: PortfolioTag[] = [
   "All",
