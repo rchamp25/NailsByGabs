@@ -3,21 +3,6 @@ import Image from "next/image";
 import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
 
-const aspectClasses = [
-  "row-span-2",
-  "col-span-2",
-  "",
-  "row-span-2",
-  "",
-  "col-span-2",
-  "row-span-2",
-  "",
-  "col-span-2",
-  "",
-  "row-span-2",
-  "",
-] as const;
-
 const portfolioImages = [
   "/portfolio/IMG_5264.jpeg",
   "/portfolio/IMG_5268.jpeg",
@@ -73,14 +58,11 @@ export default function PortfolioPage() {
           </p>
         </div>
 
-        <div className="grid auto-rows-[180px] grid-cols-2 gap-4 md:auto-rows-[200px] md:grid-cols-3 lg:gap-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:gap-5">
           {portfolioImages.map((imageSrc, index) => (
             <figure
               key={imageSrc}
-              className={cn(
-                "gold-ring-hover animate-portfolio-item group relative overflow-hidden rounded-2xl border border-border/60",
-                aspectClasses[index % aspectClasses.length]
-              )}
+              className="gold-ring-hover animate-portfolio-item group relative aspect-square overflow-hidden rounded-2xl border border-border/60 bg-pastel-pink/10"
               style={{ animationDelay: `${index * 70}ms` }}
             >
               <Image
@@ -88,7 +70,7 @@ export default function PortfolioPage() {
                 alt={imageAltText[index]}
                 fill
                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 400px"
-                className="object-cover object-center transition-transform duration-500 ease-emphasis group-hover:scale-[1.03]"
+                className="object-contain object-center p-1 transition-transform duration-500 ease-emphasis group-hover:scale-[1.01]"
                 priority={index < 3}
               />
               <div
