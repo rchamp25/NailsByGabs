@@ -72,8 +72,8 @@ Uses [Resend](https://resend.com) — **3,000 emails/month free**, no credit car
 1. Sign up at Resend → create an API key.
 2. In Vercel env vars, set:
    - `RESEND_API_KEY`
-   - `OWNER_NOTIFICATION_EMAIL` (Gabs’s email — or use `owner_email` already in Supabase `app_config`)
-   - `RESEND_FROM_EMAIL` (optional; `onboarding@resend.dev` works for testing)
+   - `RESEND_FROM_EMAIL` (optional; one line: `NailsByGabs <onboarding@resend.dev>` — no line breaks)
+   - `OWNER_NOTIFICATION_EMAIL` (optional) — or set **`owner_notification_email`** in Supabase `app_config` (falls back to **`owner_email`**)
 3. Redeploy and book a test appointment.
 
 Emails include client name, time, notes, and a link to the calendar.

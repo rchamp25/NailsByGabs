@@ -66,16 +66,43 @@ function buildEmailHtml(details: BookingNotificationDetails): string {
   `;
 }
 
+const DEFAULT_FROM = "NailsByGabs <onboarding@resend.dev>";
+
+/** Vercel env values with accidental newlines break Resend (e.g. `onboarding@` + newline + `>`). */
+function getResendFromAddress(): string {
+  const raw = process.env.RESEND_FROM_EMAIL;
+  if (!raw?.trim()) return DEFAULT_FROM;
+
+  const sanitized = raw.replace(/[\r\n]+/g, "").replace(/\s+/g, " ").trim();
+  const hasValidMailbox =
+    sanitized.includes("@") &&
+    !sanitized.endsWith("@") &&
+    !sanitized.includes("<@") &&
+    !sanitized.includes("@>");
+
+  if (!hasValidMailbox) {
+    console.error(
+      "[notifications] Invalid RESEND_FROM_EMAIL; using default. Got:",
+      JSON.stringify(raw)
+    );
+    return DEFAULT_FROM;
+  }
+
+  return sanitized;
+}
+
 async function sendEmail(
   to: string,
   subject: string,
   html: string
 ): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return false;
+  if (!apiKey) {
+    console.error("[notifications] RESEND_API_KEY is not set");
+    return false;
+  }
 
-  const from =
-    process.env.RESEND_FROM_EMAIL ?? "NailsByGabs <onboarding@resend.dev>";
+  const from = getResendFromAddress();
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -91,6 +118,19 @@ async function sendEmail(
     }),
   });
 
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.error(
+      "[notifications] Resend failed:",
+      response.status,
+      "to=",
+      to,
+      "from=",
+      from,
+      body
+    );
+  }
+
   return response.ok;
 }
 
@@ -102,7 +142,12 @@ export async function notifyOwnerOfBooking(slotId: string): Promise<void> {
       getOwnerNotificationEmail(),
     ]);
 
-    if (!details || !email) return;
+    if (!details || !email) {
+      console.error(
+        "[notifications] Skipped: missing booking details or owner email"
+      );
+      return;
+    }
 
     await sendEmail(
       email,
