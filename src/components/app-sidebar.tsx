@@ -52,7 +52,7 @@ export function AppSidebar({ profile, email }: AppSidebarProps) {
             Gabs
           </span>
           <span className="text-muted-foreground text-xs">
-            Premium nail artistry
+            GelX Nails
           </span>
         </Link>
       </SidebarHeader>
