@@ -23,6 +23,11 @@ export const metadata: Metadata = {
   title: "NailsByGabs | Premium Nail Artistry",
   description:
     "Luxury nail salon — portfolio, booking, services, and more. Book your appointment with Gabs today.",
+  icons: {
+    icon: "/branding/Nails%20by%20Gabs.png",
+    shortcut: "/branding/Nails%20by%20Gabs.png",
+    apple: "/branding/Nails%20by%20Gabs.png",
+  },
 };
 
 export default async function RootLayout({
