@@ -53,7 +53,8 @@ export async function signUp(
 
     return {
       success: true,
-      message: "Account created! Sign in to book your appointment.",
+      message:
+        "Account created! Check your email, click the verification link to confirm your account, then sign in to book.",
     };
   } catch (err) {
     return {
