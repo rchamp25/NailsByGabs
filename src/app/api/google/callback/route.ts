@@ -23,12 +23,19 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
-  await supabase.from("owner_integrations").upsert({
-    owner_id: user.id,
-    google_refresh_token: refreshToken,
-    google_calendar_id: "primary",
-    updated_at: new Date().toISOString(),
-  });
+  const { error: upsertError } = await supabase.from("owner_integrations").upsert(
+    {
+      owner_id: user.id,
+      google_refresh_token: refreshToken,
+      google_calendar_id: "primary",
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "owner_id" }
+  );
+
+  if (upsertError) {
+    return NextResponse.redirect(`${siteUrl}/book?google=error`);
+  }
 
   return NextResponse.redirect(`${siteUrl}/book?google=connected`);
 }

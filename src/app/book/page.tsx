@@ -103,6 +103,35 @@ export default async function BookPage({
           </p>
         )}
 
+        {google === "disconnected" && profile?.role === "owner" && (
+          <p
+            className="rounded-xl border border-gold/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            role="status"
+          >
+            Google Calendar disconnected. Use Connect to link again.
+          </p>
+        )}
+
+        {google === "error" && profile?.role === "owner" && (
+          <p
+            className="rounded-xl border border-rose-red/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            role="alert"
+          >
+            Could not connect Google Calendar. Confirm{" "}
+            <code className="text-xs">https://nailsbygabs.org/api/google/callback</code>{" "}
+            is in Google Cloud Console, then try Reconnect.
+          </p>
+        )}
+
+        {google === "disconnect_error" && profile?.role === "owner" && (
+          <p
+            className="rounded-xl border border-rose-red/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            role="alert"
+          >
+            Could not disconnect. Please try again or contact support.
+          </p>
+        )}
+
         {!user || !profile ? (
           <BookingGate />
         ) : (

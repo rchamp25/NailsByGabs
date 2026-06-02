@@ -44,15 +44,27 @@ export function GoogleCalendarConnect({
         </CardTitle>
         <CardDescription>
           {connected
-            ? "Your Google Calendar stays in sync when you add, book, or remove appointments."
+            ? "Appointments sync when you add, book, or update slots. If sync stopped after a domain change, disconnect and reconnect once."
             : "Connect once to automatically add appointments to your Google Calendar."}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-3">
         {connected ? (
-          <p className="text-muted-foreground text-sm">
-            Connected — new and updated slots sync to your calendar.
-          </p>
+          <>
+            <p className="text-muted-foreground text-sm">
+              Connected — new and updated slots sync to your calendar.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/api/google/connect">Reconnect</Link>
+              </Button>
+              <form action="/api/google/disconnect" method="post">
+                <Button type="submit" variant="outline" size="sm">
+                  Disconnect
+                </Button>
+              </form>
+            </div>
+          </>
         ) : (
           <Button asChild variant="outline">
             <Link href="/api/google/connect">Connect Google Calendar</Link>

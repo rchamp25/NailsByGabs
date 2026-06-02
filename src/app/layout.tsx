@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { PageMotion } from "@/components/page-motion";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getSessionProfile } from "@/lib/auth";
+import { CANONICAL_SITE_URL } from "@/lib/site-url";
 
 import "./globals.css";
 
@@ -20,6 +21,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(CANONICAL_SITE_URL),
   title: "NailsByGabs | GelX Nails",
   description:
     "Luxury nail salon — portfolio, booking, services, and more. Book your appointment with Gabs today.",

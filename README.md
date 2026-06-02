@@ -13,9 +13,9 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
    - `supabase/migrations/003_owner_notifications.sql` (app_config read policy for notifications)
 3. In **Table Editor → app_config**, set `owner_email` to Gabs’s sign-up email (this account gets the **owner** role).
 4. Under **Authentication → URL Configuration**:
-   - **Site URL:** your live Vercel URL (e.g. `https://nails-by-gabs.vercel.app`) — **not** localhost in production
-   - **Redirect URLs:** add both:
-     - `https://your-app.vercel.app/auth/callback`
+   - **Site URL:** `https://nailsbygabs.org` — **not** localhost in production
+   - **Redirect URLs:** add:
+     - `https://nailsbygabs.org/auth/callback`
      - `http://localhost:3000/auth/callback` (for local dev only)
 5. **Email confirmation (recommended after SMTP):** By default, turn **off** confirm email while Supabase’s built-in mail limit is an issue:
    - **Authentication → Providers → Email** → disable **Confirm email**
@@ -42,9 +42,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. Push to GitHub and import the repo in Vercel.
 2. Add the same env vars from `.env.local` in **Project Settings → Environment Variables**.
-3. Set **`NEXT_PUBLIC_SITE_URL`** to your production URL (e.g. `https://nails-by-gabs.vercel.app`) for the **Production** environment. This is what confirmation emails use — if it is missing or set to localhost, verify links will break.
+3. Set **`NEXT_PUBLIC_SITE_URL`** to `https://nailsbygabs.org` for the **Production** environment. This is what confirmation emails use — if it is missing or set to localhost, verify links will break.
 4. Redeploy after changing env vars.
-5. In Supabase, set **Site URL** to the same production URL and confirm `/auth/callback` is in **Redirect URLs**.
+5. In Supabase, set **Site URL** to `https://nailsbygabs.org` and confirm `/auth/callback` is in **Redirect URLs**.
 
 ## Booking flow
 
@@ -66,7 +66,7 @@ No business-hours rules — Gabs sets each slot’s start and end manually.
 
 1. [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → enable **Google Calendar API**.
 2. Create **OAuth 2.0 Client ID** (Web application).
-3. Authorized redirect URI: `https://YOUR-VERCEL-URL/api/google/callback`
+3. Authorized redirect URI: `https://nailsbygabs.org/api/google/callback`
 4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to Vercel env vars and redeploy.
 5. Owner signs in → Book Appointment → **Connect Google Calendar**.
 

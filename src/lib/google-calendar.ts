@@ -2,7 +2,12 @@ import "server-only";
 
 import { toGoogleCalendarDateTime } from "@/lib/business-timezone";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
+import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
+
+function getGoogleRedirectUri(): string {
+  return `${getSiteUrl()}/api/google/callback`;
+}
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3/calendars";
@@ -182,11 +187,30 @@ export async function deleteGoogleCalendarEvent(
     .eq("id", slotId);
 }
 
+export async function disconnectOwnerGoogleCalendar(
+  ownerId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("owner_integrations")
+    .update({
+      google_refresh_token: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("owner_id", ownerId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {};
+}
+
 export function getGoogleOAuthUrl(state: string): string | null {
   const config = getGoogleOAuthConfig();
   if (!config) return null;
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? ""}/api/google/callback`;
+  const redirectUri = getGoogleRedirectUri();
   const params = new URLSearchParams({
     client_id: config.clientId,
     redirect_uri: redirectUri,
@@ -204,7 +228,7 @@ export async function exchangeGoogleCode(code: string): Promise<string | null> {
   const config = getGoogleOAuthConfig();
   if (!config) return null;
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? ""}/api/google/callback`;
+  const redirectUri = getGoogleRedirectUri();
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
