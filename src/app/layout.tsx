@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { PageMotion } from "@/components/page-motion";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getSessionProfile } from "@/lib/auth";
 
@@ -36,7 +37,9 @@ export default async function RootLayout({
       <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
         <SidebarProvider defaultOpen>
           <AppSidebar profile={profile} email={user?.email} />
-          <SidebarInset>{children}</SidebarInset>
+          <SidebarInset>
+            <PageMotion>{children}</PageMotion>
+          </SidebarInset>
         </SidebarProvider>
       </body>
     </html>

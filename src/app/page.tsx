@@ -27,13 +27,14 @@ export default function PortfolioPage() {
         </div>
 
         <div className="grid auto-rows-[180px] grid-cols-2 gap-4 md:auto-rows-[200px] md:grid-cols-3 lg:gap-5">
-          {portfolioItems.map((item) => (
+          {portfolioItems.map((item, index) => (
             <figure
               key={item.id}
               className={cn(
-                "gold-ring-hover group relative overflow-hidden rounded-2xl border border-border/60",
+                "gold-ring-hover animate-portfolio-item group relative overflow-hidden rounded-2xl border border-border/60",
                 aspectClasses[item.aspect]
               )}
+              style={{ animationDelay: `${index * 70}ms` }}
             >
               <div
                 className="absolute inset-0 bg-gradient-to-br from-pastel-pink via-pastel-pink-deep/80 to-rose-red/20"

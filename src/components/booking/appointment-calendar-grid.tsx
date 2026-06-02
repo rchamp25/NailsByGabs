@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  addDays,
   formatDayHeader,
   formatDayKey,
   formatMonthYear,
@@ -15,11 +14,19 @@ import {
   getMonthGridDays,
   getWeekDays,
   isSameDay,
-  startOfMonth,
+  startOfWeek,
 } from "@/lib/calendar-utils";
 import type { SlotWithBooker } from "@/types/database";
 
 export type CalendarViewMode = "week" | "month";
+
+type CalendarTransition = "view" | "prev" | "next";
+
+const transitionClass: Record<CalendarTransition, string> = {
+  view: "animate-calendar-view-enter",
+  prev: "animate-calendar-slide-prev",
+  next: "animate-calendar-slide-next",
+};
 
 type AppointmentCalendarGridProps = {
   slots: SlotWithBooker[];
@@ -40,6 +47,12 @@ export function AppointmentCalendarGrid({
 }: AppointmentCalendarGridProps) {
   const [view, setView] = useState<CalendarViewMode>("week");
   const [anchor, setAnchor] = useState(() => new Date());
+  const [transition, setTransition] = useState<CalendarTransition>("view");
+
+  const periodKey =
+    view === "week"
+      ? formatDayKey(startOfWeek(anchor))
+      : `${anchor.getFullYear()}-${anchor.getMonth()}`;
 
   const slotsByDay = useMemo(() => {
     const map = new Map<string, SlotWithBooker[]>();
@@ -59,6 +72,7 @@ export function AppointmentCalendarGrid({
   }, [slots]);
 
   function shiftAnchor(direction: -1 | 1) {
+    setTransition(direction === 1 ? "next" : "prev");
     setAnchor((current) => {
       const next = new Date(current);
       if (view === "week") {
@@ -68,6 +82,23 @@ export function AppointmentCalendarGrid({
       }
       return next;
     });
+  }
+
+  function goToToday() {
+    setTransition("view");
+    setAnchor(new Date());
+  }
+
+  function changeView(nextView: CalendarViewMode) {
+    if (nextView === view) return;
+    setTransition("view");
+    setView(nextView);
+  }
+
+  function openWeekForDay(day: Date) {
+    setTransition("view");
+    setView("week");
+    setAnchor(day);
   }
 
   function slotTone(slot: SlotWithBooker): string {
@@ -90,9 +121,9 @@ export function AppointmentCalendarGrid({
         type="button"
         onClick={() => onSelectSlot(slot)}
         className={cn(
-          "w-full rounded-md border px-2 py-1.5 text-left text-xs transition-colors",
+          "w-full rounded-md border px-2 py-1.5 text-left text-xs transition-[background-color,box-shadow,transform] duration-300 ease-luxury",
           slotTone(slot),
-          selectedSlotId === slot.id && "ring-2 ring-gold"
+          selectedSlotId === slot.id && "ring-2 ring-gold shadow-sm"
         )}
       >
         <span className="block font-medium">
@@ -129,22 +160,28 @@ export function AppointmentCalendarGrid({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setAnchor(new Date())}
+            onClick={goToToday}
           >
             Today
           </Button>
         </div>
 
-        <p className="font-serif text-lg text-rose-red">
+        <p
+          key={`${view}-${periodKey}`}
+          className={cn(
+            "font-serif text-lg text-rose-red",
+            transitionClass[transition]
+          )}
+        >
           {view === "week" ? formatWeekRange(anchor) : formatMonthYear(anchor)}
         </p>
 
-        <div className="flex rounded-lg border border-gold/30 p-1">
+        <div className="flex rounded-lg border border-gold/30 p-1 transition-shadow duration-350 ease-luxury">
           <Button
             type="button"
             size="sm"
             variant={view === "week" ? "default" : "ghost"}
-            onClick={() => setView("week")}
+            onClick={() => changeView("week")}
           >
             Week
           </Button>
@@ -152,13 +189,17 @@ export function AppointmentCalendarGrid({
             type="button"
             size="sm"
             variant={view === "month" ? "default" : "ghost"}
-            onClick={() => setView("month")}
+            onClick={() => changeView("month")}
           >
             Month
           </Button>
         </div>
       </div>
 
+      <div
+        key={`${view}-${periodKey}`}
+        className={transitionClass[transition]}
+      >
       {view === "week" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
           {getWeekDays(anchor).map((day) => {
@@ -231,7 +272,7 @@ export function AppointmentCalendarGrid({
                         type="button"
                         onClick={() => onSelectSlot(slot)}
                         className={cn(
-                          "truncate rounded px-1 py-0.5 text-left text-[10px]",
+                          "truncate rounded px-1 py-0.5 text-left text-[10px] transition-[background-color,box-shadow] duration-300 ease-luxury",
                           slotTone(slot),
                           selectedSlotId === slot.id && "ring-1 ring-gold"
                         )}
@@ -243,10 +284,7 @@ export function AppointmentCalendarGrid({
                       <button
                         type="button"
                         className="text-left text-[10px] text-rose-red hover:underline"
-                        onClick={() => {
-                          setView("week");
-                          setAnchor(day);
-                        }}
+                        onClick={() => openWeekForDay(day)}
                       >
                         +{daySlots.length - 3} more
                       </button>
@@ -258,6 +296,7 @@ export function AppointmentCalendarGrid({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

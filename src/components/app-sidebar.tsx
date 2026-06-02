@@ -40,18 +40,18 @@ export function AppSidebar({ profile, email }: AppSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-b border-sidebar-border/80 px-4 py-5">
         <Link
           href="/"
-          className="flex flex-col gap-0.5 group-data-[collapsible=icon]:items-center"
+          className="flex flex-col gap-0.5 transition-opacity duration-300 ease-luxury group-data-[collapsible=offcanvas]:opacity-100"
         >
-          <span className="font-serif text-2xl tracking-wide text-rose-red group-data-[collapsible=icon]:text-lg">
+          <span className="font-serif text-2xl tracking-wide text-rose-red transition-all duration-300 ease-luxury">
             Nails
             <span className="text-gold">By</span>
             Gabs
           </span>
-          <span className="text-muted-foreground text-xs group-data-[collapsible=icon]:hidden">
+          <span className="text-muted-foreground text-xs">
             Premium nail artistry
           </span>
         </Link>
