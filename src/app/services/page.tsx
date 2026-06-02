@@ -14,7 +14,7 @@ export default async function ServicesPage() {
   return (
     <>
       <SiteHeader title="Services & Pricing" />
-      <div className="page-gradient main-floral-accent flex flex-1 flex-col gap-8 p-4 md:p-8">
+      <div className="page-gradient flex flex-1 flex-col gap-8 p-4 md:p-8">
         <div className="max-w-3xl">
           <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-gold">
             Menu

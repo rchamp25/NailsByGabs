@@ -5,7 +5,7 @@ export default function PortfolioPage() {
   return (
     <>
       <SiteHeader title="Portfolio" />
-      <div className="main-floral-accent flex flex-1 flex-col gap-8 p-4 md:p-8">
+      <div className="flex flex-1 flex-col gap-8 p-4 md:p-8">
         <div className="max-w-3xl">
           <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-gold">
             Nail Art Gallery
