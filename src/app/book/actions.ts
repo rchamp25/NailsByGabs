@@ -8,7 +8,10 @@ import {
   syncSlotToGoogleCalendar,
 } from "@/lib/google-calendar";
 import { parseBusinessDateTimeLocal } from "@/lib/business-timezone";
-import { notifyOwnerOfBooking } from "@/lib/notifications";
+import {
+  notifyClientOfBooking,
+  notifyOwnerOfBooking,
+} from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/server";
 
 async function getOwnerProfileId(): Promise<string | null> {
@@ -144,7 +147,10 @@ export async function bookSlot(slotId: string, notes: string) {
   }
 
   await syncGoogleForSlot(slotId);
-  await notifyOwnerOfBooking(slotId);
+  await Promise.all([
+    notifyOwnerOfBooking(slotId),
+    notifyClientOfBooking(slotId, user.email),
+  ]);
 
   revalidatePath("/book");
   return { success: true };

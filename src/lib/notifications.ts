@@ -7,7 +7,10 @@ import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 
 type BookingNotificationDetails = {
+  /** Owner-facing label (e.g. "Jane's Nails"). */
   clientName: string;
+  /** Raw profile name for client-facing emails. */
+  bookerFullName: string;
   timeRange: string;
   notes: string | null;
 };
@@ -40,12 +43,13 @@ async function getBookingDetails(
 
   return {
     clientName,
+    bookerFullName: booker?.full_name?.trim() || "Client",
     timeRange: formatSlotRange(data.start_at, data.end_at),
     notes: data.notes,
   };
 }
 
-function buildEmailHtml(details: BookingNotificationDetails): string {
+function buildOwnerEmailHtml(details: BookingNotificationDetails): string {
   const siteUrl = getSiteUrl();
   return `
     <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
@@ -64,6 +68,45 @@ function buildEmailHtml(details: BookingNotificationDetails): string {
       </p>
     </div>
   `;
+}
+
+function clientGreetingName(fullName: string): string {
+  const trimmed = fullName.trim();
+  if (!trimmed) return "there";
+  return trimmed.split(/\s+/)[0] ?? trimmed;
+}
+
+function buildClientConfirmationHtml(
+  details: BookingNotificationDetails
+): string {
+  const siteUrl = getSiteUrl();
+  const greeting = clientGreetingName(details.bookerFullName);
+  return `
+    <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
+      <h2 style="color:#c62828">You&apos;re booked!</h2>
+      <p>Hi ${greeting},</p>
+      <p>Your appointment at <strong>NailsByGabs</strong> is confirmed.</p>
+      <p><strong>When:</strong> ${details.timeRange}</p>
+      ${
+        details.notes
+          ? `<p><strong>Your notes:</strong> ${details.notes}</p>`
+          : ""
+      }
+      <p style="margin-top:24px">
+        <a href="${siteUrl}/book" style="background:#c62828;color:#fff8fa;padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid #c9a227">
+          View or manage booking
+        </a>
+      </p>
+      <p style="margin-top:24px;font-size:14px;color:#6b4a55">
+        Need to change plans? Sign in on the site and cancel from your booking on the calendar.
+      </p>
+    </div>
+  `;
+}
+
+function isValidRecipientEmail(email: string | undefined | null): email is string {
+  const trimmed = email?.trim();
+  return !!trimmed && trimmed.includes("@");
 }
 
 const DEFAULT_FROM = "NailsByGabs <onboarding@resend.dev>";
@@ -152,7 +195,38 @@ export async function notifyOwnerOfBooking(slotId: string): Promise<void> {
     await sendEmail(
       email,
       `New booking: ${details.clientName}`,
-      buildEmailHtml(details)
+      buildOwnerEmailHtml(details)
+    );
+  } catch {
+    // Booking should succeed even if email fails
+  }
+}
+
+/** Confirmation email to the client who booked. Uses the same Resend setup. Never throws. */
+export async function notifyClientOfBooking(
+  slotId: string,
+  clientEmail: string | undefined
+): Promise<void> {
+  try {
+    if (!isValidRecipientEmail(clientEmail)) {
+      console.error(
+        "[notifications] Skipped client confirmation: no valid client email"
+      );
+      return;
+    }
+
+    const details = await getBookingDetails(slotId);
+    if (!details) {
+      console.error(
+        "[notifications] Skipped client confirmation: missing booking details"
+      );
+      return;
+    }
+
+    await sendEmail(
+      clientEmail,
+      `Appointment confirmed — ${details.timeRange}`,
+      buildClientConfirmationHtml(details)
     );
   } catch {
     // Booking should succeed even if email fails
