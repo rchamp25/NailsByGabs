@@ -77,7 +77,7 @@ export default async function BookPage({
   return (
     <>
       <SiteHeader title="Book Appointment" />
-      <div className="flex flex-1 flex-col gap-6 p-4 pb-24 md:p-8 md:pb-8">
+      <div className="page-gradient flex flex-1 flex-col gap-6 p-4 pb-28 md:gap-8 md:p-8 md:pb-8">
         <div className="max-w-3xl">
           <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-gold">
             Appointment calendar

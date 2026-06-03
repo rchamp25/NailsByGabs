@@ -20,12 +20,19 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
 5. **Email confirmation (recommended after SMTP):** By default, turn **off** confirm email while Supabase’s built-in mail limit is an issue:
    - **Authentication → Providers → Email** → disable **Confirm email**
    - New signups can book immediately without a verification link.
-   - When **Resend SMTP** is configured (see below), turn **Confirm email** back on and restore the confirm template from `supabase/email-templates/confirm-signup.html` (subject: `Confirm your NailsByGabs account`).
+   - When **Brevo + nailsbygabs.org** is configured (see below), turn **Confirm email** back on and restore templates from `supabase/email-templates/`.
 6. Copy **Project URL** and **anon public** key into `.env.local` (see `.env.example`).
 
-### Auth email via Resend SMTP (when ready)
+### Auth email via Brevo + nailsbygabs.org
 
-In Supabase **Project Settings → Authentication → SMTP**: host `smtp.resend.com`, port `465`, user `resend`, password = your Resend API key, sender = a verified domain address. Then re-enable **Confirm email** in **Authentication → Providers → Email**.
+1. **Brevo** → Settings → **Domains** → add `nailsbygabs.org` → add DNS records in **Cloudflare** → wait until **Authenticated**.
+2. **Brevo** → **Senders** → add `noreply@nailsbygabs.org` (From name: `NailsByGabs`).
+3. **Supabase** → **Project Settings** → **Authentication** → **SMTP** (custom SMTP on):
+   - Host: `smtp-relay.brevo.com` · Port: `587` · User: Brevo login email · Password: Brevo **SMTP key**
+   - **Sender email:** `noreply@nailsbygabs.org` · **Sender name:** `NailsByGabs`
+4. **Authentication** → **URL Configuration** → Site URL `https://nailsbygabs.org`, redirect `https://nailsbygabs.org/auth/callback`
+5. **Email Templates** → paste `confirm-signup.html` and `reset-password.html` from `supabase/email-templates/`
+6. **Providers → Email** → **Confirm email** ON · test signup
 
 ### 2. Local dev
 

@@ -160,7 +160,12 @@ function Sidebar({
           }
           side={side}
         >
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div
+            className="sidebar-floral-bg flex h-full w-full flex-col"
+            data-mobile="true"
+          >
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     );

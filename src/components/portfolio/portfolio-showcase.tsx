@@ -184,14 +184,14 @@ export function PortfolioShowcase() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tags.map((tag) => (
           <Button
             key={tag}
             type="button"
             variant={activeTag === tag ? "default" : "outline"}
             size="sm"
-            className="rounded-full"
+            className="shrink-0 rounded-full"
             onClick={() => {
               setActiveTag(tag);
               setActiveIndex(null);

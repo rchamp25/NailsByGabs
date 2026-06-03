@@ -13,7 +13,7 @@ export default function AboutPage() {
   return (
     <>
       <SiteHeader title="About Gabs" />
-      <div className="flex flex-1 flex-col gap-8 p-4 md:p-8">
+      <div className="page-gradient flex flex-1 flex-col gap-8 p-4 md:p-8">
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
           <div className="relative aspect-[4/5] max-h-[520px] overflow-hidden rounded-2xl border border-gold/40 shadow-lg lg:max-h-none">
             <Image

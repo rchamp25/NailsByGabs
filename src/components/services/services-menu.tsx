@@ -8,6 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ServiceCategory } from "@/types/services";
 
+function splitServiceName(name: string): {
+  primary: string;
+  secondary: string | null;
+} {
+  const match = /^(.+?)\s*(\([^)]+\))\s*$/.exec(name.trim());
+  if (!match) {
+    return { primary: name, secondary: null };
+  }
+  return { primary: match[1].trim(), secondary: match[2].trim() };
+}
+
 function ServiceRow({
   item,
   editable,
@@ -21,24 +32,43 @@ function ServiceRow({
   >(updateServiceItem, null);
 
   if (!editable) {
+    const { primary, secondary } = splitServiceName(item.name);
+
     return (
-      <li className="flex items-baseline gap-3 py-3">
-        <span className="shrink-0 font-medium text-foreground">{item.name}</span>
-        <span className="gold-divider min-w-[2rem] flex-1 self-center" aria-hidden />
-        <span className="shrink-0 font-serif text-lg text-rose-red">{item.price}</span>
-        {item.note && (
-          <span className="text-muted-foreground w-full text-xs">{item.note}</span>
-        )}
+      <li className="border-border/40 border-b py-3 last:border-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium leading-snug text-foreground">{primary}</p>
+            {secondary && (
+              <p className="text-muted-foreground mt-1 text-xs leading-snug">
+                {secondary}
+              </p>
+            )}
+            {item.note && (
+              <p className="text-muted-foreground mt-1 text-xs italic">{item.note}</p>
+            )}
+          </div>
+          <span className="shrink-0 font-serif text-lg text-rose-red">{item.price}</span>
+        </div>
+        <span
+          className="gold-divider mt-3 hidden h-px w-full sm:block"
+          aria-hidden
+        />
       </li>
     );
   }
+
+  const { primary, secondary } = splitServiceName(item.name);
 
   return (
     <li className="border-border/60 border-b py-4 last:border-0">
       <form action={formAction} className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
         <input type="hidden" name="itemId" value={item.id} />
         <div>
-          <p className="font-medium">{item.name}</p>
+          <p className="font-medium">{primary}</p>
+          {secondary && (
+            <p className="text-muted-foreground mt-1 text-xs">{secondary}</p>
+          )}
         </div>
         <div className="space-y-1">
           <Label htmlFor={`price-${item.id}`} className="text-xs">
@@ -109,7 +139,7 @@ export function ServicesMenu({ categories, isOwner }: ServicesMenuProps) {
       {categories.map((category) => (
         <section
           key={category.id}
-          className="rounded-2xl border border-gold/25 bg-card/90 p-6 shadow-sm backdrop-blur-sm"
+          className="rounded-2xl border border-gold/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm md:p-6"
         >
           <h3 className="font-serif border-b border-gold/30 pb-3 text-2xl text-rose-red-deep">
             {category.title}

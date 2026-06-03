@@ -463,7 +463,7 @@ export function BookingCalendar({
       </Dialog>
 
       {!isOwner && nextOpenSlot && (
-        <div className="fixed inset-x-0 bottom-3 z-40 px-4 md:hidden">
+        <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] z-40 px-4 md:hidden">
           <Button
             className="w-full rounded-full shadow-lg shadow-rose-red/15"
             onClick={() => {

@@ -172,6 +172,14 @@
       #fff5f8 100%
     );
   }
+  .main-floral-accent {
+    background: linear-gradient(
+      165deg,
+      #fff8fa 0%,
+      #f1fbf3 45%,
+      #fff5f8 100%
+    );
+  }
   .square-iframe-container {
     min-height: min(720px, 85vh);
     -webkit-overflow-scrolling: touch;
@@ -344,9 +352,42 @@
   opacity: 0.68;
 }
 
-[data-mobile="true"] .sidebar-floral-bg::before,
-[data-mobile="true"] .sidebar-floral-bg::after {
-  opacity: 0.6;
+.sidebar-floral-bg[data-mobile="true"]::before,
+.sidebar-floral-bg[data-mobile="true"]::after {
+  opacity: 0.62;
+}
+
+@media (max-width: 767px) {
+  .mobile-ambient-bg {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .mobile-ambient-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.45;
+    background:
+      radial-gradient(
+        120% 80% at 100% -10%,
+        rgb(204 239 212 / 0.55) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        90% 60% at -5% 100%,
+        rgb(248 187 217 / 0.35) 0%,
+        transparent 50%
+      ),
+      linear-gradient(180deg, #fff8fa 0%, #fff5f8 100%);
+  }
+
+  .mobile-ambient-bg > * {
+    position: relative;
+    z-index: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
