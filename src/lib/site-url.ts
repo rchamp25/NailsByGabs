@@ -29,3 +29,8 @@ export function getSiteUrl(): string {
 export function getAuthCallbackUrl(): string {
   return `${getSiteUrl()}/auth/callback`;
 }
+
+export function getPasswordResetCallbackUrl(): string {
+  const next = encodeURIComponent("/auth/update-password");
+  return `${getAuthCallbackUrl()}?next=${next}`;
+}

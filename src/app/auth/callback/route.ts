@@ -15,6 +15,10 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      if (safeNext === "/auth/update-password") {
+        return NextResponse.redirect(`${siteUrl}/auth/update-password`);
+      }
+
       const destination = safeNext.includes("?")
         ? `${safeNext}&welcome=1`
         : `${safeNext}?welcome=1`;
@@ -22,5 +26,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${siteUrl}/auth/login?error=confirmation`);
+  return NextResponse.redirect(`${siteUrl}/auth/login?error=auth`);
 }

@@ -28,7 +28,7 @@ export function MobileBottomNav() {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
+  if (!mounted || pathname.startsWith("/auth")) {
     return null;
   }
 

@@ -39,7 +39,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   }, [state, router]);
 
   return (
-    <Card className="border-gold/30 mx-auto w-full max-w-md">
+    <Card className="border-gold/30 mx-auto w-full max-w-md shadow-sm">
       <CardHeader>
         <CardTitle className="text-rose-red">
           {mode === "login" ? "Welcome back" : "Create an account"}
@@ -61,6 +61,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 placeholder="Maddy Brown"
                 required
                 autoComplete="name"
+                className="min-h-11"
               />
             </div>
           )}
@@ -73,16 +74,28 @@ export function AuthForm({ mode }: AuthFormProps) {
               placeholder="you@example.com"
               required
               autoComplete="email"
+              className="min-h-11"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="password">Password</Label>
+              {mode === "login" && (
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs text-rose-red hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              )}
+            </div>
             <Input
               id="password"
               name="password"
               type="password"
               required
               minLength={6}
+              className="min-h-11"
               autoComplete={
                 mode === "login" ? "current-password" : "new-password"
               }

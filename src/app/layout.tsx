@@ -6,6 +6,13 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PageMotion } from "@/components/page-motion";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getSessionProfile } from "@/lib/auth";
+import {
+  defaultOpenGraph,
+  defaultTwitter,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+} from "@/lib/site-metadata";
 import { CANONICAL_SITE_URL } from "@/lib/site-url";
 
 import "./globals.css";
@@ -23,9 +30,10 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   metadataBase: new URL(CANONICAL_SITE_URL),
-  title: "NailsByGabs | GelX Nails",
-  description:
-    "Luxury nail salon — portfolio, booking, services, and more. Book your appointment with Gabs today.",
+  title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  openGraph: defaultOpenGraph,
+  twitter: defaultTwitter,
   icons: {
     icon: "/branding/Nails%20by%20Gabs.png",
     shortcut: "/branding/Nails%20by%20Gabs.png",
