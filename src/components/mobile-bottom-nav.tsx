@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   CalendarHeart,
   Images,
@@ -9,7 +11,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -21,17 +22,19 @@ const items = [
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { isMobile, setOpenMobile } = useSidebar();
+  const [mounted, setMounted] = useState(false);
 
-  function handleNavigate() {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
   }
 
-  return (
+  const nav = (
     <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/30 bg-sidebar/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md md:hidden"
+      className="mobile-bottom-nav md:hidden"
       aria-label="Main navigation"
     >
       <ul className="grid h-16 grid-cols-4">
@@ -45,7 +48,6 @@ export function MobileBottomNav() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                onClick={handleNavigate}
                 className={cn(
                   "flex h-full flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors duration-300 ease-luxury",
                   isActive
@@ -68,4 +70,6 @@ export function MobileBottomNav() {
       </ul>
     </nav>
   );
+
+  return createPortal(nav, document.body);
 }

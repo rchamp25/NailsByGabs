@@ -49,8 +49,8 @@ export default async function RootLayout({
             <div className="flex min-h-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
               <PageMotion>{children}</PageMotion>
             </div>
-            <MobileBottomNav />
           </SidebarInset>
+          <MobileBottomNav />
         </SidebarProvider>
       </body>
     </html>

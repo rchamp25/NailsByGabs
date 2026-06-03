@@ -388,6 +388,21 @@
     position: relative;
     z-index: 1;
   }
+
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    border-top: 1px solid color-mix(in srgb, var(--color-gold) 30%, transparent);
+    background: color-mix(in srgb, var(--sidebar) 95%, transparent);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transform: translateZ(0);
+    box-shadow: 0 -4px 24px -8px rgb(140 207 155 / 0.25);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
