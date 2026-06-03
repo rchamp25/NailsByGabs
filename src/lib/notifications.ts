@@ -15,6 +15,13 @@ type BookingNotificationDetails = {
   notes: string | null;
 };
 
+/** Load slot details before cancel_my_booking clears booked_by and notes. */
+export async function readBookingNotificationDetails(
+  slotId: string
+): Promise<BookingNotificationDetails | null> {
+  return getBookingDetails(slotId);
+}
+
 async function getBookingDetails(
   slotId: string
 ): Promise<BookingNotificationDetails | null> {
@@ -56,6 +63,27 @@ function buildOwnerEmailHtml(details: BookingNotificationDetails): string {
       <h2 style="color:#c62828">New appointment booked</h2>
       <p><strong>${details.clientName}</strong> just reserved a slot on NailsByGabs.</p>
       <p><strong>When:</strong> ${details.timeRange}</p>
+      ${
+        details.notes
+          ? `<p><strong>Client notes:</strong> ${details.notes}</p>`
+          : ""
+      }
+      <p style="margin-top:24px">
+        <a href="${siteUrl}/book" style="background:#c62828;color:#fff8fa;padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid #c9a227">
+          View calendar
+        </a>
+      </p>
+    </div>
+  `;
+}
+
+function buildOwnerCancellationHtml(details: BookingNotificationDetails): string {
+  const siteUrl = getSiteUrl();
+  return `
+    <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
+      <h2 style="color:#c62828">Booking cancelled</h2>
+      <p><strong>${details.clientName}</strong> cancelled their appointment on NailsByGabs.</p>
+      <p><strong>Was scheduled for:</strong> ${details.timeRange}</p>
       ${
         details.notes
           ? `<p><strong>Client notes:</strong> ${details.notes}</p>`
@@ -230,6 +258,36 @@ export async function notifyClientOfBooking(
     );
   } catch {
     // Booking should succeed even if email fails
+  }
+}
+
+/** Email Gabs when a client cancels. Never throws. */
+export async function notifyOwnerOfCancellation(
+  details: BookingNotificationDetails | null
+): Promise<void> {
+  try {
+    if (!details) {
+      console.error(
+        "[notifications] Skipped cancellation alert: missing booking details"
+      );
+      return;
+    }
+
+    const email = await getOwnerNotificationEmail();
+    if (!email) {
+      console.error(
+        "[notifications] Skipped cancellation alert: missing owner email"
+      );
+      return;
+    }
+
+    await sendEmail(
+      email,
+      `Booking cancelled: ${details.clientName}`,
+      buildOwnerCancellationHtml(details)
+    );
+  } catch {
+    // Cancellation should succeed even if email fails
   }
 }
 

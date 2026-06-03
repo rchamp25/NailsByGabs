@@ -11,6 +11,8 @@ import { parseBusinessDateTimeLocal } from "@/lib/business-timezone";
 import {
   notifyClientOfBooking,
   notifyOwnerOfBooking,
+  notifyOwnerOfCancellation,
+  readBookingNotificationDetails,
 } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/server";
 
@@ -163,6 +165,7 @@ export async function cancelMyBooking(slotId: string) {
   }
 
   const supabase = await createClient();
+  const details = await readBookingNotificationDetails(slotId);
   const { error } = await supabase.rpc("cancel_my_booking", {
     p_slot_id: slotId,
   });
@@ -171,6 +174,7 @@ export async function cancelMyBooking(slotId: string) {
     return { error: error.message };
   }
 
+  await notifyOwnerOfCancellation(details);
   await syncGoogleForSlot(slotId);
 
   revalidatePath("/book");

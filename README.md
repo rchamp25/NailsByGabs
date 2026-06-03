@@ -93,7 +93,7 @@ Uses [Resend](https://resend.com) — **3,000 emails/month free**, no credit car
    - `OWNER_NOTIFICATION_EMAIL` (optional) — or set **`owner_notification_email`** in Supabase `app_config` (falls back to **`owner_email`**)
 3. Redeploy and book a test appointment.
 
-Owner emails include client name, time, notes, and a link to the calendar. Clients who book online also receive a **confirmation email** to the address on their account (same Resend API key).
+Owner emails include client name, time, notes, and a link to the calendar when someone **books** or **cancels**. Clients who book online also receive a **confirmation email** to the address on their account (same Resend API key).
 
 ## Customize content
 
