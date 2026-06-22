@@ -27,7 +27,8 @@ export default async function ClientsPage() {
           </h2>
           <p className="text-muted-foreground rhythm-copy mt-3 text-sm leading-relaxed md:text-base">
             View who has signed up, check whether their email is verified, and
-            send a password reset link if they need help logging in.
+            resend verification or send a password reset if they need help
+            logging in.
           </p>
         </div>
 

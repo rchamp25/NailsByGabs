@@ -4,18 +4,88 @@ import { useActionState } from "react";
 
 import {
   sendClientPasswordReset,
+  sendClientVerificationEmail,
   type ClientsActionState,
 } from "@/app/clients/actions";
 import { Button } from "@/components/ui/button";
 import type { OwnerClientRow } from "@/lib/clients";
 import { cn } from "@/lib/utils";
 
-function ClientRow({ client }: { client: OwnerClientRow }) {
+function ActionMessage({ state }: { state: ClientsActionState | null }) {
+  if (state?.error) {
+    return (
+      <p className="text-destructive text-sm" role="alert">
+        {state.error}
+      </p>
+    );
+  }
+
+  if (state?.success && state.message) {
+    return (
+      <p
+        className="text-sm text-emerald-800 dark:text-emerald-300"
+        role="status"
+      >
+        {state.message}
+      </p>
+    );
+  }
+
+  return null;
+}
+
+function ClientVerificationResendForm({ client }: { client: OwnerClientRow }) {
+  const [state, formAction, pending] = useActionState<
+    ClientsActionState | null,
+    FormData
+  >(sendClientVerificationEmail, null);
+
+  return (
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+      <form action={formAction}>
+        <input type="hidden" name="clientId" value={client.id} />
+        <input type="hidden" name="email" value={client.email ?? ""} />
+        <Button
+          type="submit"
+          size="sm"
+          disabled={pending || !client.email}
+          className="min-h-11 w-full sm:min-h-9 sm:w-auto"
+        >
+          {pending ? "Sending…" : "Resend verification"}
+        </Button>
+      </form>
+      <ActionMessage state={state} />
+    </div>
+  );
+}
+
+function ClientPasswordResetForm({ client }: { client: OwnerClientRow }) {
   const [state, formAction, pending] = useActionState<
     ClientsActionState | null,
     FormData
   >(sendClientPasswordReset, null);
 
+  return (
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+      <form action={formAction}>
+        <input type="hidden" name="clientId" value={client.id} />
+        <input type="hidden" name="email" value={client.email ?? ""} />
+        <Button
+          type="submit"
+          variant="outline"
+          size="sm"
+          disabled={pending || !client.email}
+          className="min-h-11 w-full sm:min-h-9 sm:w-auto"
+        >
+          {pending ? "Sending…" : "Send reset email"}
+        </Button>
+      </form>
+      <ActionMessage state={state} />
+    </div>
+  );
+}
+
+function ClientRow({ client }: { client: OwnerClientRow }) {
   return (
     <li className="border-border/60 rounded-xl border bg-background/70 p-4 shadow-xs">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -36,31 +106,13 @@ function ClientRow({ client }: { client: OwnerClientRow }) {
           </span>
         </div>
 
-        <form action={formAction} className="shrink-0 sm:pt-0.5">
-          <input type="hidden" name="clientId" value={client.id} />
-          <input type="hidden" name="email" value={client.email ?? ""} />
-          <Button
-            type="submit"
-            variant="outline"
-            size="sm"
-            disabled={pending || !client.email}
-            className="min-h-11 w-full sm:min-h-9 sm:w-auto"
-          >
-            {pending ? "Sending…" : "Send reset email"}
-          </Button>
-        </form>
+        <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+          {!client.emailVerified && (
+            <ClientVerificationResendForm client={client} />
+          )}
+          <ClientPasswordResetForm client={client} />
+        </div>
       </div>
-
-      {state?.error && (
-        <p className="text-destructive mt-3 text-sm" role="alert">
-          {state.error}
-        </p>
-      )}
-      {state?.success && state.message && (
-        <p className="mt-3 text-sm text-emerald-800 dark:text-emerald-300" role="status">
-          {state.message}
-        </p>
-      )}
     </li>
   );
 }
