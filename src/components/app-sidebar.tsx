@@ -7,6 +7,7 @@ import {
   Images,
   Sparkles,
   UserRound,
+  Users,
 } from "lucide-react";
 
 import { SidebarAuth } from "@/components/sidebar-auth";
@@ -24,12 +25,18 @@ import {
 } from "@/components/ui/sidebar";
 import type { Profile } from "@/types/database";
 
-const navItems = [
+const baseNavItems = [
   { title: "Portfolio", href: "/", icon: Images },
   { title: "Book Appointment", href: "/book", icon: CalendarHeart },
   { title: "Services & Pricing", href: "/services", icon: Sparkles },
   { title: "About Gabs", href: "/about", icon: UserRound },
-];
+] as const;
+
+const ownerNavItem = {
+  title: "Clients",
+  href: "/clients",
+  icon: Users,
+} as const;
 
 type AppSidebarProps = {
   profile: Profile | null;
@@ -38,6 +45,10 @@ type AppSidebarProps = {
 
 export function AppSidebar({ profile, email }: AppSidebarProps) {
   const pathname = usePathname();
+  const navItems =
+    profile?.role === "owner"
+      ? [...baseNavItems, ownerNavItem]
+      : [...baseNavItems];
 
   return (
     <Sidebar collapsible="offcanvas">

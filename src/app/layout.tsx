@@ -58,7 +58,7 @@ export default async function RootLayout({
               <PageMotion>{children}</PageMotion>
             </div>
           </SidebarInset>
-          <MobileBottomNav />
+          <MobileBottomNav isOwner={profile?.role === "owner"} />
         </SidebarProvider>
       </body>
     </html>
