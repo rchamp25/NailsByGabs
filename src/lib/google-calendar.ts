@@ -1,6 +1,7 @@
 import "server-only";
 
 import { toGoogleCalendarDateTime } from "@/lib/business-timezone";
+import { getLocationShortLabel, normalizeAppointmentLocation } from "@/lib/appointment-locations";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
 import { getSiteUrl } from "@/lib/site-url";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -74,6 +75,7 @@ type SlotRow = {
   start_at: string;
   end_at: string;
   status: string;
+  location: string;
   booked_name: string | null;
   notes: string | null;
   google_event_id: string | null;
@@ -92,6 +94,7 @@ async function getSlot(slotId: string): Promise<SlotRow | null> {
       start_at,
       end_at,
       status,
+      location,
       booked_name,
       notes,
       google_event_id,
@@ -113,10 +116,18 @@ function getEventTitle(slot: SlotRow): string {
 }
 
 function getEventDescription(slot: SlotRow): string {
+  const location = getLocationShortLabel(
+    normalizeAppointmentLocation(slot.location)
+  );
+  const lines = [`Location: ${location}`, "Managed via NailsByGabs booking."];
   if (slot.status === "booked" && slot.notes) {
-    return `Client notes: ${slot.notes}`;
+    lines.unshift(`Client notes: ${slot.notes}`);
   }
-  return "Managed via NailsByGabs booking.";
+  return lines.join("\n");
+}
+
+function getEventLocation(slot: SlotRow): string {
+  return getLocationShortLabel(normalizeAppointmentLocation(slot.location));
 }
 
 export async function syncSlotToGoogleCalendar(
@@ -138,6 +149,7 @@ export async function syncSlotToGoogleCalendar(
   const body = {
     summary: getEventTitle(slot),
     description: getEventDescription(slot),
+    location: getEventLocation(slot),
     start: toGoogleCalendarDateTime(slot.start_at),
     end: toGoogleCalendarDateTime(slot.end_at),
   };

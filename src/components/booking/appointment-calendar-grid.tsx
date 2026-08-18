@@ -4,6 +4,13 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  getLocationFilterLabel,
+  getLocationLabel,
+  getSlotLocationClass,
+  LOCATION_FILTERS,
+  type LocationFilter,
+} from "@/lib/appointment-locations";
 import { formatBusinessDayKey } from "@/lib/business-timezone";
 import { cn } from "@/lib/utils";
 import {
@@ -46,8 +53,17 @@ export function AppointmentCalendarGrid({
   selectedSlotId,
 }: AppointmentCalendarGridProps) {
   const [view, setView] = useState<CalendarViewMode>("week");
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>("all");
   const [anchor, setAnchor] = useState(() => new Date());
   const [transition, setTransition] = useState<CalendarTransition>("view");
+
+  const filteredSlots = useMemo(
+    () =>
+      locationFilter === "all"
+        ? slots
+        : slots.filter((slot) => slot.location === locationFilter),
+    [locationFilter, slots]
+  );
 
   const periodKey =
     view === "week"
@@ -56,7 +72,7 @@ export function AppointmentCalendarGrid({
 
   const slotsByDay = useMemo(() => {
     const map = new Map<string, SlotWithBooker[]>();
-    for (const slot of slots) {
+    for (const slot of filteredSlots) {
       const key = formatBusinessDayKey(slot.start_at);
       const list = map.get(key) ?? [];
       list.push(slot);
@@ -69,7 +85,7 @@ export function AppointmentCalendarGrid({
       );
     }
     return map;
-  }, [slots]);
+  }, [filteredSlots]);
 
   function shiftAnchor(direction: -1 | 1) {
     setTransition(direction === 1 ? "next" : "prev");
@@ -102,16 +118,18 @@ export function AppointmentCalendarGrid({
   }
 
   function slotTone(slot: SlotWithBooker): string {
+    const locationClass = getSlotLocationClass(slot.location);
+
     if (slot.status === "open") {
-      return "border-accent/50 bg-secondary/50 hover:bg-secondary-deep/40";
+      return cn(locationClass, "hover:brightness-[0.98]");
     }
     if (slot.booked_by === userId) {
-      return "border-primary/40 bg-primary/10 hover:bg-primary/15";
+      return cn(locationClass, "ring-1 ring-primary/35");
     }
     if (isOwner) {
-      return "border-primary-deep/30 bg-card hover:bg-secondary/30";
+      return cn(locationClass, "hover:brightness-[0.98]");
     }
-    return "border-border bg-muted/40 text-muted-foreground";
+    return cn(locationClass, "opacity-75 text-muted-foreground");
   }
 
   function renderSlotChip(slot: SlotWithBooker) {
@@ -123,19 +141,48 @@ export function AppointmentCalendarGrid({
         className={cn(
           "w-full rounded-md border px-2 py-1.5 text-left text-xs transition-[background-color,box-shadow,transform] duration-300 ease-luxury",
           slotTone(slot),
-          selectedSlotId === slot.id && "ring-2 ring-gold shadow-sm"
+          selectedSlotId === slot.id && "ring-2 ring-accent shadow-sm"
         )}
       >
         <span className="block font-medium">
           {formatTime(slot.start_at)} – {formatTime(slot.end_at)}
         </span>
         <span className="block truncate opacity-90">{getLabel(slot)}</span>
+        <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide opacity-80">
+          {getLocationLabel(slot.location)}
+        </span>
       </button>
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-2">
+        {LOCATION_FILTERS.map((filter) => (
+          <Button
+            key={filter}
+            type="button"
+            size="sm"
+            variant={locationFilter === filter ? "default" : "outline"}
+            className="rounded-full"
+            onClick={() => setLocationFilter(filter)}
+          >
+            {getLocationFilterLabel(filter)}
+          </Button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-2">
+          <span className="slot-location-webster size-3 rounded-full border" />
+          Webster
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className="slot-location-binghamton size-3 rounded-full border" />
+          Binghamton
+        </span>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button
@@ -197,7 +244,7 @@ export function AppointmentCalendarGrid({
       </div>
 
       <div
-        key={`${view}-${periodKey}`}
+        key={`${view}-${periodKey}-${locationFilter}`}
         className={transitionClass[transition]}
       >
       {view === "week" ? (
@@ -274,10 +321,11 @@ export function AppointmentCalendarGrid({
                         className={cn(
                           "truncate rounded px-1 py-0.5 text-left text-[10px] transition-[background-color,box-shadow] duration-300 ease-luxury",
                           slotTone(slot),
-                          selectedSlotId === slot.id && "ring-1 ring-gold"
+                          selectedSlotId === slot.id && "ring-1 ring-accent"
                         )}
                       >
-                        {formatTime(slot.start_at)} {getLabel(slot)}
+                        {formatTime(slot.start_at)} {getLabel(slot)} ·{" "}
+                        {getLocationLabel(slot.location)}
                       </button>
                     ))}
                     {daySlots.length > 3 && (

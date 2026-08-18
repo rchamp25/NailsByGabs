@@ -14,6 +14,7 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
    - `supabase/migrations/004_update_services_menu.sql`
    - `supabase/migrations/005_owner_manual_booked_name.sql` (manual booked name on slots)
    - `supabase/migrations/006_site_theme.sql` (owner-selectable site color presets)
+   - `supabase/migrations/007_appointment_location.sql` (Webster / Binghamton on slots)
 3. In **Table Editor → app_config**, set `owner_email` to Gabs’s sign-up email (this account gets the **owner** role).
 4. Under **Authentication → URL Configuration**:
    - **Site URL:** `https://nailsbygabs.org` — **not** localhost in production

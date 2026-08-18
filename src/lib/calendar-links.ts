@@ -28,6 +28,7 @@ export function buildIcsFile(options: {
   startAt: string;
   endAt: string;
   details?: string;
+  location?: string;
   uid?: string;
 }): string {
   const uid = options.uid ?? `nailsbygabs-${Date.now()}@nailsbygabs.com`;
@@ -49,9 +50,10 @@ export function buildIcsFile(options: {
     `DTEND:${end}`,
     `SUMMARY:${options.title}`,
     `DESCRIPTION:${description}`,
+    options.location ? `LOCATION:${options.location.replace(/,/g, "\\,")}` : null,
     "END:VEVENT",
     "END:VCALENDAR",
-  ].join("\r\n");
+  ].filter(Boolean).join("\r\n");
 }
 
 export function downloadIcs(filename: string, content: string) {
@@ -64,15 +66,22 @@ export function downloadIcs(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
+import { getLocationShortLabel, normalizeAppointmentLocation } from "@/lib/appointment-locations";
+
 export function getPersonalCalendarLinks(slot: {
   id: string;
   start_at: string;
   end_at: string;
+  location?: string | null;
   notes?: string | null;
 }) {
   const title = "NailsByGabs Appointment";
+  const location = getLocationShortLabel(
+    normalizeAppointmentLocation(slot.location)
+  );
   const details = [
     "Your nail appointment with Gabs at NailsByGabs.",
+    `Location: ${location}`,
     slot.notes ? `Notes: ${slot.notes}` : null,
   ]
     .filter(Boolean)
@@ -84,12 +93,14 @@ export function getPersonalCalendarLinks(slot: {
       startAt: slot.start_at,
       endAt: slot.end_at,
       details,
+      location,
     }),
     ics: buildIcsFile({
       title,
       startAt: slot.start_at,
       endAt: slot.end_at,
       details,
+      location,
       uid: `${slot.id}@nailsbygabs.com`,
     }),
   };

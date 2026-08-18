@@ -1,3 +1,5 @@
+import type { AppointmentLocation } from "@/lib/appointment-locations";
+
 export type UserRole = "owner" | "client";
 
 export type Profile = {
@@ -7,11 +9,14 @@ export type Profile = {
   created_at: string;
 };
 
+export type { AppointmentLocation };
+
 export type AppointmentSlot = {
   id: string;
   start_at: string;
   end_at: string;
   status: "open" | "booked";
+  location: AppointmentLocation;
   booked_by: string | null;
   booked_name: string | null;
   notes: string | null;

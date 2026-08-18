@@ -73,6 +73,10 @@
   --silk-a: rgb(252 232 239 / 0.9);
   --silk-b: rgb(255 248 245 / 0.85);
   --nav-glass: rgb(255 245 248 / 0.92);
+  --slot-webster-bg: rgb(252 232 239 / 0.72);
+  --slot-webster-border: rgb(201 162 39 / 0.45);
+  --slot-binghamton-bg: rgb(217 244 223 / 0.82);
+  --slot-binghamton-border: rgb(74 155 95 / 0.42);
 }
 
 [data-theme="pearl"] {
@@ -106,6 +110,10 @@
   --silk-a: rgb(224 231 255 / 0.95);
   --silk-b: rgb(244 247 255 / 0.9);
   --nav-glass: rgb(238 242 255 / 0.92);
+  --slot-webster-bg: rgb(224 231 255 / 0.82);
+  --slot-webster-border: rgb(129 140 248 / 0.45);
+  --slot-binghamton-bg: rgb(209 250 229 / 0.82);
+  --slot-binghamton-border: rgb(52 211 153 / 0.42);
 }
 
 [data-theme="night-chrome"] {
@@ -139,6 +147,10 @@
   --silk-a: rgb(39 39 42 / 0.95);
   --silk-b: rgb(10 10 15 / 0.92);
   --nav-glass: rgb(17 17 22 / 0.92);
+  --slot-webster-bg: rgb(63 63 70 / 0.55);
+  --slot-webster-border: rgb(212 212 216 / 0.35);
+  --slot-binghamton-bg: rgb(20 83 45 / 0.38);
+  --slot-binghamton-border: rgb(74 222 128 / 0.35);
 }
 
 @layer base {
@@ -291,6 +303,16 @@
     rgb(255 255 255 / 0.28),
     transparent 45%
   );
+}
+
+.slot-location-webster {
+  background-color: var(--slot-webster-bg);
+  border-color: var(--slot-webster-border);
+}
+
+.slot-location-binghamton {
+  background-color: var(--slot-binghamton-bg);
+  border-color: var(--slot-binghamton-border);
 }
 
 .pill-nav-shell {

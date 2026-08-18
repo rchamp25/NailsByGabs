@@ -10,6 +10,7 @@ type AddToCalendarButtonsProps = {
     id: string;
     start_at: string;
     end_at: string;
+    location?: string | null;
     notes?: string | null;
   };
 };

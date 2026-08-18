@@ -8,6 +8,9 @@ import {
   isGoogleOAuthConfigured,
 } from "@/lib/services";
 import { createClient } from "@/lib/supabase/server";
+import {
+  normalizeAppointmentLocation,
+} from "@/lib/appointment-locations";
 import type { SlotWithBooker } from "@/types/database";
 
 async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
@@ -22,6 +25,7 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
       start_at,
       end_at,
       status,
+      location,
       booked_by,
       booked_name,
       notes,
@@ -50,6 +54,7 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
       start_at: row.start_at,
       end_at: row.end_at,
       status: row.status as SlotWithBooker["status"],
+      location: normalizeAppointmentLocation(row.location as string | null),
       booked_by: row.booked_by,
       booked_name: row.booked_name,
       notes: row.notes,

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getLocationShortLabel, normalizeAppointmentLocation } from "@/lib/appointment-locations";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
 import { formatSlotRange } from "@/lib/dates";
 import { getOwnerNotificationEmail } from "@/lib/owner-contact";
@@ -12,6 +13,7 @@ type BookingNotificationDetails = {
   /** Raw profile name for client-facing emails. */
   bookerFullName: string;
   timeRange: string;
+  locationLabel: string;
   notes: string | null;
 };
 
@@ -32,6 +34,7 @@ async function getBookingDetails(
       `
       start_at,
       end_at,
+      location,
       notes,
       booker:profiles!booked_by ( full_name )
     `
@@ -52,6 +55,9 @@ async function getBookingDetails(
     clientName,
     bookerFullName: booker?.full_name?.trim() || "Client",
     timeRange: formatSlotRange(data.start_at, data.end_at),
+    locationLabel: getLocationShortLabel(
+      normalizeAppointmentLocation(data.location as string | null)
+    ),
     notes: data.notes,
   };
 }
@@ -63,6 +69,7 @@ function buildOwnerEmailHtml(details: BookingNotificationDetails): string {
       <h2 style="color:#c62828">New appointment booked</h2>
       <p><strong>${details.clientName}</strong> just reserved a slot on NailsByGabs.</p>
       <p><strong>When:</strong> ${details.timeRange}</p>
+      <p><strong>Location:</strong> ${details.locationLabel}</p>
       ${
         details.notes
           ? `<p><strong>Client notes:</strong> ${details.notes}</p>`
@@ -84,6 +91,7 @@ function buildOwnerCancellationHtml(details: BookingNotificationDetails): string
       <h2 style="color:#c62828">Booking cancelled</h2>
       <p><strong>${details.clientName}</strong> cancelled their appointment on NailsByGabs.</p>
       <p><strong>Was scheduled for:</strong> ${details.timeRange}</p>
+      <p><strong>Location:</strong> ${details.locationLabel}</p>
       ${
         details.notes
           ? `<p><strong>Client notes:</strong> ${details.notes}</p>`
@@ -115,6 +123,7 @@ function buildClientConfirmationHtml(
       <p>Hi ${greeting},</p>
       <p>Your appointment at <strong>NailsByGabs</strong> is confirmed.</p>
       <p><strong>When:</strong> ${details.timeRange}</p>
+      <p><strong>Location:</strong> ${details.locationLabel}</p>
       ${
         details.notes
           ? `<p><strong>Your notes:</strong> ${details.notes}</p>`

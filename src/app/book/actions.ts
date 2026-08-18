@@ -8,6 +8,7 @@ import {
   syncSlotToGoogleCalendar,
 } from "@/lib/google-calendar";
 import { parseBusinessDateTimeLocal } from "@/lib/business-timezone";
+import { isAppointmentLocation } from "@/lib/appointment-locations";
 import {
   notifyClientOfBooking,
   notifyOwnerOfBooking,
@@ -43,6 +44,7 @@ export async function createSlot(formData: FormData) {
   const endRaw = String(formData.get("endAt") ?? "");
   const preBooked = String(formData.get("preBooked") ?? "") === "on";
   const bookedName = String(formData.get("bookedName") ?? "").trim();
+  const locationRaw = String(formData.get("location") ?? "").trim();
   const startAt = parseBusinessDateTimeLocal(startRaw);
   const endAt = parseBusinessDateTimeLocal(endRaw);
 
@@ -55,6 +57,9 @@ export async function createSlot(formData: FormData) {
   if (preBooked && !bookedName) {
     return { error: "Enter a client name for pre-booked slots." };
   }
+  if (!isAppointmentLocation(locationRaw)) {
+    return { error: "Select a location (Webster or Binghamton)." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -62,6 +67,7 @@ export async function createSlot(formData: FormData) {
     .insert({
       start_at: startAt.toISOString(),
       end_at: endAt.toISOString(),
+      location: locationRaw,
       status: preBooked ? "booked" : "open",
       booked_by: null,
       booked_name: preBooked ? bookedName : null,

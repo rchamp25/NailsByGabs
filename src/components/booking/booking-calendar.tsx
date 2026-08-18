@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
+import { getLocationShortLabel } from "@/lib/appointment-locations";
 import { formatSlotRange } from "@/lib/dates";
 import type { Profile, SlotWithBooker } from "@/types/database";
 
@@ -60,6 +61,7 @@ export function BookingCalendar({
   const [preBooked, setPreBooked] = useState(false);
   const [slotStartAt, setSlotStartAt] = useState("");
   const [slotEndAt, setSlotEndAt] = useState("");
+  const [slotLocation, setSlotLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [bookError, setBookError] = useState<string | null>(null);
 
@@ -95,6 +97,7 @@ export function BookingCalendar({
       if (result?.error) return { error: result.error };
       setSlotStartAt("");
       setSlotEndAt("");
+      setSlotLocation("");
       setPreBooked(false);
       router.refresh();
       return null;
@@ -198,6 +201,23 @@ export function BookingCalendar({
                     required
                   />
                 </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="location">Location</Label>
+                  <select
+                    id="location"
+                    name="location"
+                    required
+                    value={slotLocation}
+                    onChange={(event) => setSlotLocation(event.target.value)}
+                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    <option value="" disabled>
+                      Select location
+                    </option>
+                    <option value="webster">Webster, NY (Rochester area)</option>
+                    <option value="binghamton">SUNY Binghamton (school year)</option>
+                  </select>
+                </div>
                 <div className="sm:col-span-2 flex items-center gap-2">
                   <input
                     id="preBooked"
@@ -261,6 +281,9 @@ export function BookingCalendar({
                   <p className="font-medium">
                     {formatSlotRange(slot.start_at, slot.end_at)}
                   </p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {getLocationShortLabel(slot.location)}
+                  </p>
                   {slot.notes && (
                     <p className="text-muted-foreground mt-1 text-sm">
                       Notes: {slot.notes}
@@ -298,6 +321,9 @@ export function BookingCalendar({
           <CardContent className="flex flex-col gap-4">
             <p className="text-sm text-foreground">
               {formatSlotRange(justBookedSlot.start_at, justBookedSlot.end_at)}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {getLocationShortLabel(justBookedSlot.location)}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <AddToCalendarButtons slot={justBookedSlot} />
@@ -339,7 +365,8 @@ export function BookingCalendar({
           <CardHeader>
             <CardTitle className="text-lg text-primary">Selected slot</CardTitle>
             <CardDescription>
-              {formatSlotRange(activeSlot.start_at, activeSlot.end_at)}
+              {formatSlotRange(activeSlot.start_at, activeSlot.end_at)} ·{" "}
+              {getLocationShortLabel(activeSlot.location)}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -431,8 +458,13 @@ export function BookingCalendar({
           <DialogHeader>
             <DialogTitle>Reserve this slot</DialogTitle>
             <DialogDescription>
-              {bookTarget &&
-                formatSlotRange(bookTarget.start_at, bookTarget.end_at)}
+              {bookTarget && (
+                <>
+                  {formatSlotRange(bookTarget.start_at, bookTarget.end_at)}
+                  <br />
+                  {getLocationShortLabel(bookTarget.location)}
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
