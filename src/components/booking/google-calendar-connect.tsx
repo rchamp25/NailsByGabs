@@ -20,9 +20,9 @@ export function GoogleCalendarConnect({
 }: GoogleCalendarConnectProps) {
   if (!configured) {
     return (
-      <Card className="border-gold/25 bg-card/80">
+      <Card className="border-accent/25 bg-card/80">
         <CardHeader>
-          <CardTitle className="text-lg text-rose-red">
+          <CardTitle className="text-lg text-primary">
             Google Calendar sync
           </CardTitle>
           <CardDescription>
@@ -37,9 +37,9 @@ export function GoogleCalendarConnect({
   }
 
   return (
-    <Card className="border-gold/25 bg-card/80">
+    <Card className="border-accent/25 bg-card/80">
       <CardHeader>
-        <CardTitle className="text-lg text-rose-red">
+        <CardTitle className="text-lg text-primary">
           Google Calendar sync
         </CardTitle>
         <CardDescription>

@@ -11,6 +11,9 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
    - `supabase/migrations/001_initial.sql`
    - `supabase/migrations/002_services_and_google.sql` (editable prices + Google sync)
    - `supabase/migrations/003_owner_notifications.sql` (app_config read policy for notifications)
+   - `supabase/migrations/004_update_services_menu.sql`
+   - `supabase/migrations/005_owner_manual_booked_name.sql` (manual booked name on slots)
+   - `supabase/migrations/006_site_theme.sql` (owner-selectable site color presets)
 3. In **Table Editor → app_config**, set `owner_email` to Gabs’s sign-up email (this account gets the **owner** role).
 4. Under **Authentication → URL Configuration**:
    - **Site URL:** `https://nailsbygabs.org` — **not** localhost in production
@@ -57,7 +60,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Role | Capabilities |
 |------|----------------|
-| **Owner** (Gabs’s email in `app_config`) | Create/delete slots, release bookings, see all appointments as e.g. *Maddy Brown's Nails* |
+| **Owner** (Gabs’s email in `app_config`) | Create/delete slots, release bookings, see all appointments, manage clients, switch site theme |
 | **Client** (any registered user) | Reserve open slots with optional notes; other bookings show as **Taken**; cancel own bookings |
 
 No business-hours rules — Gabs sets each slot’s start and end manually.
@@ -94,6 +97,12 @@ Uses [Resend](https://resend.com) — **3,000 emails/month free**, no credit car
 3. Redeploy and book a test appointment.
 
 Owner emails include client name, time, notes, and a link to the calendar when someone **books** or **cancels**. Clients who book online also receive a **confirmation email** to the address on their account (same Resend API key).
+
+### Site appearance (owner)
+
+Gabs can switch the whole site between **Cherry Studio**, **Pearl**, and **Night Chrome** from **Appearance** in the sidebar (or **Theme** on mobile). The active preset is stored in Supabase `app_config` (`active_theme`) and applies to every visitor.
+
+Run `supabase/migrations/006_site_theme.sql` if the Appearance page cannot save themes.
 
 ## Customize content
 

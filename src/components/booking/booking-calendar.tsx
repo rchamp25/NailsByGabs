@@ -166,9 +166,9 @@ export function BookingCalendar({
             connected={googleConnected}
             configured={googleConfigured}
           />
-          <Card className="border-gold/30">
+          <Card className="border-accent/30">
             <CardHeader>
-              <CardTitle className="text-rose-red">Add open slot</CardTitle>
+              <CardTitle className="text-primary">Add open slot</CardTitle>
               <CardDescription>
                 Choose a start time — end time defaults to one hour later (you can
                 change it). Syncs to Google Calendar when connected.
@@ -205,7 +205,7 @@ export function BookingCalendar({
                     type="checkbox"
                     checked={preBooked}
                     onChange={(event) => setPreBooked(event.target.checked)}
-                    className="h-4 w-4 rounded border-border text-rose-red focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
+                    className="h-4 w-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
                   />
                   <Label htmlFor="preBooked" className="font-normal">
                     Create as already taken
@@ -222,7 +222,7 @@ export function BookingCalendar({
                   />
                 </div>
                 {createState?.error && (
-                  <p className="text-sm text-rose-red sm:col-span-2" role="alert">
+                  <p className="text-sm text-primary sm:col-span-2" role="alert">
                     {createState.error}
                   </p>
                 )}
@@ -244,9 +244,9 @@ export function BookingCalendar({
       )}
 
       {!isOwner && myBookings.length > 0 && (
-        <Card className="border-gold/25 bg-card/80">
+        <Card className="border-accent/25 bg-card/80">
           <CardHeader>
-            <CardTitle className="text-lg text-rose-red">Your appointments</CardTitle>
+            <CardTitle className="text-lg text-primary">Your appointments</CardTitle>
             <CardDescription>
               Add any booking to your personal Google Calendar or download an .ics file.
             </CardDescription>
@@ -285,10 +285,10 @@ export function BookingCalendar({
       )}
 
       {!isOwner && justBookedSlot && (
-        <Card className="border-gold/45 bg-card/90 micro-pop">
+        <Card className="border-accent/45 bg-card/90 micro-pop">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-rose-red">
-              <CheckCircle2 className="size-5 text-gold" />
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <CheckCircle2 className="size-5 text-accent" />
               You&apos;re booked!
             </CardTitle>
             <CardDescription>
@@ -302,7 +302,7 @@ export function BookingCalendar({
             <div className="flex flex-wrap items-center gap-2">
               <AddToCalendarButtons slot={justBookedSlot} />
               <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                <Sparkles className="size-3 text-gold" />
+                <Sparkles className="size-3 text-accent" />
                 Google Calendar is the fastest option.
               </span>
             </div>
@@ -312,8 +312,8 @@ export function BookingCalendar({
 
       <div>
         <div className="mb-4 flex items-center gap-2">
-          <CalendarDays className="size-5 text-gold" />
-          <h3 className="font-serif text-xl text-rose-red">Calendar</h3>
+          <CalendarDays className="size-5 text-accent" />
+          <h3 className="font-serif text-xl text-primary">Calendar</h3>
         </div>
 
         {slots.length === 0 ? (
@@ -335,9 +335,9 @@ export function BookingCalendar({
       </div>
 
       {activeSlot && (
-        <Card className="border-gold/30">
+        <Card className="border-accent/30">
           <CardHeader>
-            <CardTitle className="text-lg text-rose-red">Selected slot</CardTitle>
+            <CardTitle className="text-lg text-primary">Selected slot</CardTitle>
             <CardDescription>
               {formatSlotRange(activeSlot.start_at, activeSlot.end_at)}
             </CardDescription>
@@ -346,7 +346,7 @@ export function BookingCalendar({
             <p
               className={
                 isOwner && activeSlot.status === "booked"
-                  ? "font-serif text-xl text-rose-red-deep"
+                  ? "font-serif text-xl text-primary"
                   : "text-muted-foreground"
               }
             >
@@ -447,7 +447,7 @@ export function BookingCalendar({
               />
             </div>
             {bookError && (
-              <p className="text-sm text-rose-red" role="alert">
+              <p className="text-sm text-primary" role="alert">
                 {bookError}
               </p>
             )}
@@ -465,7 +465,7 @@ export function BookingCalendar({
       {!isOwner && nextOpenSlot && (
         <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] z-40 px-4 md:hidden">
           <Button
-            className="w-full rounded-full shadow-lg shadow-rose-red/15"
+            className="w-full rounded-full shadow-lg shadow-primary/15"
             onClick={() => {
               setSelectedSlot(nextOpenSlot);
               setBookTarget(nextOpenSlot);

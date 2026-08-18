@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <>
           {reset === "success" && (
             <p
-              className="w-full max-w-md rounded-xl border border-gold/40 bg-pastel-pink/60 px-4 py-3 text-center text-sm text-rose-red-deep"
+              className="w-full max-w-md rounded-xl border border-accent/40 bg-secondary/60 px-4 py-3 text-center text-sm text-primary"
               role="status"
             >
               Password updated. Sign in with your new password to book.
@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           )}
           {error === "confirmation" && (
             <p
-              className="w-full max-w-md rounded-xl border border-gold/40 bg-pastel-pink/60 px-4 py-3 text-center text-sm text-rose-red-deep"
+              className="w-full max-w-md rounded-xl border border-accent/40 bg-secondary/60 px-4 py-3 text-center text-sm text-primary"
               role="alert"
             >
               That confirmation link expired or was already used. Sign in below,
@@ -32,7 +32,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           )}
           {error === "auth" && (
             <p
-              className="w-full max-w-md rounded-xl border border-rose-red/40 bg-pastel-pink/60 px-4 py-3 text-center text-sm text-rose-red-deep"
+              className="w-full max-w-md rounded-xl border border-primary/40 bg-secondary/60 px-4 py-3 text-center text-sm text-primary"
               role="alert"
             >
               That link expired or could not be verified. Try signing in or

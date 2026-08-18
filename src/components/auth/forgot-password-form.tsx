@@ -25,9 +25,9 @@ export function ForgotPasswordForm() {
   >(requestPasswordReset, null);
 
   return (
-    <Card className="border-gold/30 w-full shadow-sm">
+    <Card className="border-accent/30 w-full shadow-sm">
       <CardHeader>
-        <CardTitle className="text-rose-red">Forgot password?</CardTitle>
+        <CardTitle className="text-primary">Forgot password?</CardTitle>
         <CardDescription>
           Enter the email you used to sign up. We&apos;ll send a link to choose a
           new password.
@@ -49,13 +49,13 @@ export function ForgotPasswordForm() {
             />
           </div>
           {state?.error && (
-            <p className="text-sm text-rose-red" role="alert">
+            <p className="text-sm text-primary" role="alert">
               {state.error}
             </p>
           )}
           {state?.message && (
             <p
-              className="rounded-xl border border-gold/40 bg-pastel-pink/60 px-3 py-3 text-sm leading-relaxed text-rose-red-deep"
+              className="rounded-xl border border-accent/40 bg-secondary/60 px-3 py-3 text-sm leading-relaxed text-primary"
               role="status"
             >
               {state.message}
@@ -67,7 +67,7 @@ export function ForgotPasswordForm() {
         </form>
         <p className="text-muted-foreground mt-4 text-center text-sm">
           Remember your password?{" "}
-          <Link href="/auth/login" className="text-rose-red hover:underline">
+          <Link href="/auth/login" className="text-primary hover:underline">
             Sign in
           </Link>
         </p>

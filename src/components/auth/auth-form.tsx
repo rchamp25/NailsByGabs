@@ -39,9 +39,9 @@ export function AuthForm({ mode }: AuthFormProps) {
   }, [state, router]);
 
   return (
-    <Card className="border-gold/30 mx-auto w-full max-w-md shadow-sm">
+    <Card className="border-accent/30 mx-auto w-full max-w-md shadow-sm">
       <CardHeader>
-        <CardTitle className="text-rose-red">
+        <CardTitle className="text-primary">
           {mode === "login" ? "Welcome back" : "Create an account"}
         </CardTitle>
         <CardDescription>
@@ -83,7 +83,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               {mode === "login" && (
                 <Link
                   href="/auth/forgot-password"
-                  className="text-xs text-rose-red hover:underline"
+                  className="text-xs text-primary hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -102,12 +102,12 @@ export function AuthForm({ mode }: AuthFormProps) {
             />
           </div>
           {state?.error && (
-            <p className="text-sm text-rose-red" role="alert">
+            <p className="text-sm text-primary" role="alert">
               {state.error}
             </p>
           )}
           {state?.message && (
-            <p className="text-sm text-rose-red-deep" role="status">
+            <p className="text-sm text-primary" role="status">
               {state.message}
             </p>
           )}
@@ -123,14 +123,14 @@ export function AuthForm({ mode }: AuthFormProps) {
           {mode === "login" ? (
             <>
               No account?{" "}
-              <Link href="/auth/signup" className="text-rose-red hover:underline">
+              <Link href="/auth/signup" className="text-primary hover:underline">
                 Sign up
               </Link>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <Link href="/auth/login" className="text-rose-red hover:underline">
+              <Link href="/auth/login" className="text-primary hover:underline">
                 Sign in
               </Link>
             </>

@@ -7,7 +7,7 @@ export function WelcomeBanner({ show }: WelcomeBannerProps) {
 
   return (
     <div
-      className="rounded-xl border border-gold/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+      className="rounded-xl border border-accent/40 bg-secondary/60 px-4 py-3 text-sm text-primary"
       role="status"
     >
       Welcome to NailsByGabs! You&apos;re signed in and can book open

@@ -22,9 +22,11 @@ function splitServiceName(name: string): {
 function ServiceRow({
   item,
   editable,
+  index,
 }: {
   item: ServiceCategory["items"][number];
   editable: boolean;
+  index: number;
 }) {
   const [state, formAction, pending] = useActionState<
     ServicesActionState | null,
@@ -35,7 +37,10 @@ function ServiceRow({
     const { primary, secondary } = splitServiceName(item.name);
 
     return (
-      <li className="border-border/40 border-b py-3 last:border-0">
+      <li
+        className="animate-list-item border-border/40 border-b py-3 last:border-0"
+        style={{ animationDelay: `${index * 40}ms` }}
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="font-medium leading-snug text-foreground">{primary}</p>
@@ -48,10 +53,10 @@ function ServiceRow({
               <p className="text-muted-foreground mt-1 text-xs italic">{item.note}</p>
             )}
           </div>
-          <span className="shrink-0 font-serif text-lg text-rose-red">{item.price}</span>
+          <span className="shrink-0 font-serif text-lg text-primary">{item.price}</span>
         </div>
         <span
-          className="gold-divider mt-3 hidden h-px w-full sm:block"
+          className="accent-divider mt-3 hidden h-px w-full sm:block"
           aria-hidden
         />
       </li>
@@ -99,12 +104,12 @@ function ServiceRow({
             {pending ? "Saving…" : "Save"}
           </Button>
           {state?.error && (
-            <p className="text-sm text-rose-red" role="alert">
+            <p className="text-destructive text-sm" role="alert">
               {state.error}
             </p>
           )}
           {state?.success && (
-            <p className="text-sm text-rose-red-deep" role="status">
+            <p className="text-sm text-primary" role="status">
               Saved
             </p>
           )}
@@ -130,23 +135,29 @@ export function ServicesMenu({ categories, isOwner }: ServicesMenuProps) {
   }
 
   return (
-    <div className="grid max-w-3xl gap-8">
+    <div className="grid max-w-4xl gap-6 md:grid-cols-2">
       {isOwner && (
-        <p className="rounded-xl border border-gold/30 bg-pastel-pink/40 px-4 py-3 text-sm text-rose-red-deep">
+        <p className="md:col-span-2 rounded-xl border border-accent/30 bg-secondary/60 px-4 py-3 text-sm text-primary">
           Owner mode — update prices below and click Save on each row.
         </p>
       )}
-      {categories.map((category) => (
+      {categories.map((category, categoryIndex) => (
         <section
           key={category.id}
-          className="rounded-2xl border border-gold/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm md:p-6"
+          className="spotlight-card rounded-2xl border border-accent/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm md:p-6"
+          style={{ animationDelay: `${categoryIndex * 80}ms` }}
         >
-          <h3 className="font-serif border-b border-gold/30 pb-3 text-2xl text-rose-red-deep">
+          <h3 className="font-serif border-b border-accent/30 pb-3 text-2xl text-primary">
             {category.title}
           </h3>
           <ul className="mt-2">
-            {category.items.map((item) => (
-              <ServiceRow key={item.id} item={item} editable={isOwner} />
+            {category.items.map((item, index) => (
+              <ServiceRow
+                key={item.id}
+                item={item}
+                editable={isOwner}
+                index={index}
+              />
             ))}
           </ul>
         </section>

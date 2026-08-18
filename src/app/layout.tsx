@@ -6,6 +6,7 @@ import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PageMotion } from "@/components/page-motion";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getSessionProfile } from "@/lib/auth";
+import { getActiveThemeId } from "@/lib/theme";
 import {
   defaultOpenGraph,
   defaultTwitter,
@@ -46,10 +47,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { user, profile } = await getSessionProfile();
+  const [{ user, profile }, activeThemeId] = await Promise.all([
+    getSessionProfile(),
+    getActiveThemeId(),
+  ]);
 
   return (
-    <html lang="en">
+    <html lang="en" data-theme={activeThemeId}>
       <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
         <SidebarProvider defaultOpen>
           <AppSidebar profile={profile} email={user?.email} />

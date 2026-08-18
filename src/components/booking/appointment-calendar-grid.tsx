@@ -103,13 +103,13 @@ export function AppointmentCalendarGrid({
 
   function slotTone(slot: SlotWithBooker): string {
     if (slot.status === "open") {
-      return "border-gold/50 bg-pastel-pink/50 hover:bg-pastel-pink-deep/40";
+      return "border-accent/50 bg-secondary/50 hover:bg-secondary-deep/40";
     }
     if (slot.booked_by === userId) {
-      return "border-rose-red/40 bg-rose-red/10 hover:bg-rose-red/15";
+      return "border-primary/40 bg-primary/10 hover:bg-primary/15";
     }
     if (isOwner) {
-      return "border-rose-red-deep/30 bg-card hover:bg-pastel-pink/30";
+      return "border-primary-deep/30 bg-card hover:bg-secondary/30";
     }
     return "border-border bg-muted/40 text-muted-foreground";
   }
@@ -169,14 +169,14 @@ export function AppointmentCalendarGrid({
         <p
           key={`${view}-${periodKey}`}
           className={cn(
-            "font-serif text-lg text-rose-red",
+            "font-serif text-lg text-primary",
             transitionClass[transition]
           )}
         >
           {view === "week" ? formatWeekRange(anchor) : formatMonthYear(anchor)}
         </p>
 
-        <div className="flex rounded-lg border border-gold/30 p-1 transition-shadow duration-350 ease-luxury">
+        <div className="flex rounded-lg border border-accent/30 p-1 transition-shadow duration-350 ease-luxury">
           <Button
             type="button"
             size="sm"
@@ -212,13 +212,13 @@ export function AppointmentCalendarGrid({
                 key={key}
                 className={cn(
                   "min-h-40 rounded-xl border bg-card/70 p-3",
-                  isToday ? "border-gold/50" : "border-border/70"
+                  isToday ? "border-accent/50" : "border-border/70"
                 )}
               >
                 <p
                   className={cn(
                     "mb-2 text-sm font-medium",
-                    isToday ? "text-rose-red" : "text-foreground"
+                    isToday ? "text-primary" : "text-foreground"
                   )}
                 >
                   {formatDayHeader(day)}
@@ -254,13 +254,13 @@ export function AppointmentCalendarGrid({
                   className={cn(
                     "min-h-24 rounded-lg border p-1.5",
                     inMonth ? "bg-background/80" : "bg-muted/20 opacity-60",
-                    isToday ? "border-gold/50" : "border-border/50"
+                    isToday ? "border-accent/50" : "border-border/50"
                   )}
                 >
                   <p
                     className={cn(
                       "mb-1 text-xs font-medium",
-                      isToday ? "text-rose-red" : "text-muted-foreground"
+                      isToday ? "text-primary" : "text-muted-foreground"
                     )}
                   >
                     {day.getDate()}
@@ -283,7 +283,7 @@ export function AppointmentCalendarGrid({
                     {daySlots.length > 3 && (
                       <button
                         type="button"
-                        className="text-left text-[10px] text-rose-red hover:underline"
+                        className="text-left text-[10px] text-primary hover:underline"
                         onClick={() => openWeekForDay(day)}
                       >
                         +{daySlots.length - 3} more

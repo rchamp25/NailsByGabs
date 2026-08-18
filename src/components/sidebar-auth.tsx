@@ -24,7 +24,7 @@ export function SidebarAuth({ profile, email }: SidebarAuthProps) {
         <SidebarMenuItem>
           <SidebarMenuButton asChild tooltip="Sign in">
             <Link href="/auth/login">
-              <LogIn className="text-gold" />
+              <LogIn className="text-accent" />
               <span>Sign in</span>
             </Link>
           </SidebarMenuButton>
@@ -32,7 +32,7 @@ export function SidebarAuth({ profile, email }: SidebarAuthProps) {
         <SidebarMenuItem>
           <SidebarMenuButton asChild tooltip="Sign up">
             <Link href="/auth/signup">
-              <User className="text-gold" />
+              <User className="text-accent" />
               <span>Sign up</span>
             </Link>
           </SidebarMenuButton>
@@ -46,7 +46,7 @@ export function SidebarAuth({ profile, email }: SidebarAuthProps) {
       <p className="text-muted-foreground truncate px-2 text-xs group-data-[collapsible=icon]:hidden">
         {profile.full_name || email}
         {profile.role === "owner" && (
-          <span className="text-gold ml-1">· Owner</span>
+          <span className="text-accent ml-1">· Owner</span>
         )}
       </p>
       <form action={signOut}>
@@ -54,9 +54,9 @@ export function SidebarAuth({ profile, email }: SidebarAuthProps) {
           type="submit"
           variant="ghost"
           size="sm"
-          className="text-muted-foreground hover:text-rose-red w-full justify-start gap-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2"
+          className="text-muted-foreground hover:text-primary w-full justify-start gap-2 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2"
         >
-          <LogOut className="size-4 text-gold" />
+          <LogOut className="size-4 text-accent" />
           <span className="group-data-[collapsible=icon]:hidden">Sign out</span>
         </Button>
       </form>

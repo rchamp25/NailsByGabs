@@ -17,7 +17,7 @@ export function AuthPageShell({ title, children, banner }: AuthPageShellProps) {
         <div className="w-full max-w-md">{children}</div>
         <Link
           href="/"
-          className="text-muted-foreground text-sm hover:text-rose-red"
+          className="text-muted-foreground text-sm hover:text-primary"
         >
           ← Back to site
         </Link>

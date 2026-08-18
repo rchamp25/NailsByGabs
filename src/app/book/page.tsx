@@ -79,10 +79,10 @@ export default async function BookPage({
       <SiteHeader title="Book Appointment" />
       <div className="page-gradient flex flex-1 flex-col gap-6 p-4 pb-28 md:gap-8 md:p-8 md:pb-8">
         <div className="max-w-3xl">
-          <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-gold">
+          <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-accent">
             Appointment calendar
           </p>
-          <h2 className="font-serif mt-1 text-3xl text-rose-red md:text-5xl">
+          <h2 className="font-serif mt-1 text-3xl text-primary md:text-5xl">
             Reserve your spot
           </h2>
           <p className="text-muted-foreground rhythm-copy mt-3 text-sm leading-relaxed md:text-base">
@@ -90,13 +90,26 @@ export default async function BookPage({
               ? "Add open time slots for clients. Booked appointments show client names."
               : "Choose an open slot and add notes for special requests. Other booked times appear as Taken."}
           </p>
+          {profile?.role !== "owner" && user && (
+            <ol className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
+              {["Pick a day", "Choose a slot", "Confirm booking"].map((step, index) => (
+                <li
+                  key={step}
+                  className="rounded-xl border border-accent/25 bg-card/80 px-3 py-2 text-center"
+                >
+                  <span className="text-accent font-medium">{index + 1}.</span>{" "}
+                  {step}
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
 
         <WelcomeBanner show={welcome === "1" && !!user} />
 
         {google === "connected" && profile?.role === "owner" && (
           <p
-            className="rounded-xl border border-gold/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            className="rounded-xl border border-accent/40 bg-secondary/60 px-4 py-3 text-sm text-primary"
             role="status"
           >
             Google Calendar connected — appointments will sync automatically.
@@ -105,7 +118,7 @@ export default async function BookPage({
 
         {google === "disconnected" && profile?.role === "owner" && (
           <p
-            className="rounded-xl border border-gold/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            className="rounded-xl border border-accent/40 bg-secondary/60 px-4 py-3 text-sm text-primary"
             role="status"
           >
             Google Calendar disconnected. Use Connect to link again.
@@ -114,7 +127,7 @@ export default async function BookPage({
 
         {google === "error" && profile?.role === "owner" && (
           <p
-            className="rounded-xl border border-rose-red/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            className="rounded-xl border border-primary/40 bg-secondary/60 px-4 py-3 text-sm text-primary"
             role="alert"
           >
             Could not connect Google Calendar. Confirm{" "}
@@ -125,7 +138,7 @@ export default async function BookPage({
 
         {google === "disconnect_error" && profile?.role === "owner" && (
           <p
-            className="rounded-xl border border-rose-red/40 bg-pastel-pink/60 px-4 py-3 text-sm text-rose-red-deep"
+            className="rounded-xl border border-primary/40 bg-secondary/60 px-4 py-3 text-sm text-primary"
             role="alert"
           >
             Could not disconnect. Please try again or contact support.

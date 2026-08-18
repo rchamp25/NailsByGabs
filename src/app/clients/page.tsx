@@ -19,10 +19,10 @@ export default async function ClientsPage() {
       <SiteHeader title="Clients" />
       <div className="page-gradient flex flex-1 flex-col gap-8 p-4 md:p-8">
         <div className="max-w-3xl">
-          <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-gold">
+          <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-accent">
             Accounts
           </p>
-          <h2 className="font-serif mt-1 text-3xl text-rose-red md:text-5xl">
+          <h2 className="font-serif mt-1 text-3xl text-primary md:text-5xl">
             Clients
           </h2>
           <p className="text-muted-foreground rhythm-copy mt-3 text-sm leading-relaxed md:text-base">

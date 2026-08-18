@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   CalendarHeart,
   Images,
+  Palette,
   Sparkles,
   UserRound,
   Users,
@@ -32,11 +33,10 @@ const baseNavItems = [
   { title: "About Gabs", href: "/about", icon: UserRound },
 ] as const;
 
-const ownerNavItem = {
-  title: "Clients",
-  href: "/clients",
-  icon: Users,
-} as const;
+const ownerNavItems = [
+  { title: "Clients", href: "/clients", icon: Users },
+  { title: "Appearance", href: "/settings", icon: Palette },
+] as const;
 
 type AppSidebarProps = {
   profile: Profile | null;
@@ -47,7 +47,7 @@ export function AppSidebar({ profile, email }: AppSidebarProps) {
   const pathname = usePathname();
   const navItems =
     profile?.role === "owner"
-      ? [...baseNavItems, ownerNavItem]
+      ? [...baseNavItems, ...ownerNavItems]
       : [...baseNavItems];
 
   return (
@@ -57,14 +57,12 @@ export function AppSidebar({ profile, email }: AppSidebarProps) {
           href="/"
           className="flex flex-col gap-0.5 transition-opacity duration-300 ease-luxury group-data-[collapsible=offcanvas]:opacity-100"
         >
-          <span className="font-serif text-2xl tracking-wide text-rose-red transition-all duration-300 ease-luxury">
+          <span className="font-serif text-2xl tracking-wide text-primary transition-all duration-300 ease-luxury">
             Nails
-            <span className="text-gold">By</span>
+            <span className="text-accent">By</span>
             Gabs
           </span>
-          <span className="text-muted-foreground text-xs">
-            GelX Nails
-          </span>
+          <span className="text-muted-foreground text-xs">GelX Nails</span>
         </Link>
       </SidebarHeader>
 
@@ -86,7 +84,7 @@ export function AppSidebar({ profile, email }: AppSidebarProps) {
                       tooltip={item.title}
                     >
                       <Link href={item.href}>
-                        <item.icon className="text-gold" />
+                        <item.icon className="text-accent" />
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>

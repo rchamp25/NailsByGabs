@@ -11,9 +11,9 @@ import {
 
 export function BookingGate() {
   return (
-    <Card className="border-gold/30 mx-auto max-w-lg">
+    <Card className="border-accent/30 mx-auto max-w-lg">
       <CardHeader>
-        <CardTitle className="text-rose-red">Sign in to book</CardTitle>
+        <CardTitle className="text-primary">Sign in to book</CardTitle>
         <CardDescription>
           Create a free account to view the calendar and reserve open appointment
           slots. No payment is processed on this site.

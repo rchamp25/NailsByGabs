@@ -27,9 +27,9 @@ export function UpdatePasswordForm({ hasSession }: UpdatePasswordFormProps) {
 
   if (!hasSession) {
     return (
-      <Card className="border-gold/30 w-full shadow-sm">
+      <Card className="border-accent/30 w-full shadow-sm">
         <CardHeader>
-          <CardTitle className="text-rose-red">Link expired</CardTitle>
+          <CardTitle className="text-primary">Link expired</CardTitle>
           <CardDescription>
             This password reset link is invalid or has already been used.
           </CardDescription>
@@ -47,9 +47,9 @@ export function UpdatePasswordForm({ hasSession }: UpdatePasswordFormProps) {
   }
 
   return (
-    <Card className="border-gold/30 w-full shadow-sm">
+    <Card className="border-accent/30 w-full shadow-sm">
       <CardHeader>
-        <CardTitle className="text-rose-red">Choose a new password</CardTitle>
+        <CardTitle className="text-primary">Choose a new password</CardTitle>
         <CardDescription>
           Enter a new password for your account, then sign in to book.
         </CardDescription>
@@ -81,7 +81,7 @@ export function UpdatePasswordForm({ hasSession }: UpdatePasswordFormProps) {
             />
           </div>
           {state?.error && (
-            <p className="text-sm text-rose-red" role="alert">
+            <p className="text-sm text-primary" role="alert">
               {state.error}
             </p>
           )}
