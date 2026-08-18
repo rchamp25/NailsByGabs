@@ -1,4 +1,4 @@
-export const THEME_IDS = ["cherry-studio", "pearl", "night-chrome"] as const;
+export const THEME_IDS = ["cherry-studio", "pearl", "flower"] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
@@ -29,8 +29,8 @@ export const THEME_CATALOG: ThemeMeta[] = [
     swatches: ["#f4f7ff", "#6366f1", "#c4b5fd"],
   },
   {
-    id: "night-chrome",
-    label: "Night Chrome",
+    id: "flower",
+    label: "Flower",
     description: "Pastel pink and green — a lighter and bolder shade of each.",
     swatches: ["#fff0f5", "#e889a8", "#e8f7eb", "#7bc88a"],
   },

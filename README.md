@@ -15,6 +15,7 @@ Premium nail salon website with Supabase auth and appointment slot booking (no p
    - `supabase/migrations/005_owner_manual_booked_name.sql` (manual booked name on slots)
    - `supabase/migrations/006_site_theme.sql` (owner-selectable site color presets)
    - `supabase/migrations/007_appointment_location.sql` (Webster / Binghamton on slots)
+   - `supabase/migrations/008_rename_flower_theme.sql` (renames night-chrome theme to flower)
 3. In **Table Editor → app_config**, set `owner_email` to Gabs’s sign-up email (this account gets the **owner** role).
 4. Under **Authentication → URL Configuration**:
    - **Site URL:** `https://nailsbygabs.org` — **not** localhost in production
@@ -101,7 +102,9 @@ Owner emails include client name, time, notes, and a link to the calendar when s
 
 ### Site appearance (owner)
 
-Gabs can switch the whole site between **Cherry Studio**, **Pearl**, and **Night Chrome** from **Appearance** in the sidebar (or **Theme** on mobile). The active preset is stored in Supabase `app_config` (`active_theme`) and applies to every visitor.
+Gabs can switch the whole site between **Cherry Studio**, **Pearl**, and **Flower** from **Appearance** in the sidebar (or **Theme** on mobile). The active preset is stored in Supabase `app_config` (`active_theme`) and applies to every visitor.
+
+Run `supabase/migrations/008_rename_flower_theme.sql` if the database still uses the old `night-chrome` theme id.
 
 Run `supabase/migrations/006_site_theme.sql` if the Appearance page cannot save themes.
 
