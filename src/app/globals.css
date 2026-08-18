@@ -117,40 +117,41 @@
 }
 
 [data-theme="night-chrome"] {
-  --background: #0a0a0f;
-  --foreground: #f5f5f7;
-  --card: #141419;
-  --card-foreground: #f5f5f7;
-  --primary: #e11d48;
-  --primary-foreground: #fff1f2;
-  --secondary: #18181b;
-  --secondary-foreground: #e4e4e7;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #d4d4d8;
-  --accent-foreground: #18181b;
-  --destructive: #f87171;
-  --border: #3f3f46;
-  --sidebar: #111116;
-  --sidebar-foreground: #f5f5f7;
-  --sidebar-primary: #e11d48;
-  --sidebar-primary-foreground: #fff1f2;
-  --sidebar-accent: #27272a;
-  --sidebar-accent-foreground: #f5f5f7;
-  --sidebar-border: #3f3f46;
-  --sidebar-ring: #a1a1aa;
-  --page-gradient-start: #0a0a0f;
-  --page-gradient-mid: #111116;
-  --page-gradient-end: #0f0f14;
-  --hero-glow-a: rgb(225 29 72 / 0.18);
-  --hero-glow-b: rgb(212 212 216 / 0.1);
-  --silk-a: rgb(39 39 42 / 0.95);
-  --silk-b: rgb(10 10 15 / 0.92);
-  --nav-glass: rgb(17 17 22 / 0.92);
-  --slot-webster-bg: rgb(63 63 70 / 0.55);
-  --slot-webster-border: rgb(212 212 216 / 0.35);
-  --slot-binghamton-bg: rgb(20 83 45 / 0.38);
-  --slot-binghamton-border: rgb(74 222 128 / 0.35);
+  /* Pastel pink (light + bold) and pastel green (light + bold) */
+  --background: #fff8fb;
+  --foreground: #3d2a32;
+  --card: #fffbfd;
+  --card-foreground: #3d2a32;
+  --primary: #e889a8;
+  --primary-foreground: #fff8fb;
+  --secondary: #fff0f5;
+  --secondary-foreground: #6b3d52;
+  --muted: #e8f7eb;
+  --muted-foreground: #4a6350;
+  --accent: #7bc88a;
+  --accent-foreground: #1f3d28;
+  --destructive: #dc2626;
+  --border: #f0d4e0;
+  --sidebar: #fff5f9;
+  --sidebar-foreground: #3d2a32;
+  --sidebar-primary: #e889a8;
+  --sidebar-primary-foreground: #fff8fb;
+  --sidebar-accent: #e8f7eb;
+  --sidebar-accent-foreground: #2f5a3a;
+  --sidebar-border: #f0d4e0;
+  --sidebar-ring: #7bc88a;
+  --page-gradient-start: #fff0f5;
+  --page-gradient-mid: #f5fbf6;
+  --page-gradient-end: #e8f7eb;
+  --hero-glow-a: rgb(232 137 168 / 0.28);
+  --hero-glow-b: rgb(123 200 138 / 0.24);
+  --silk-a: rgb(255 240 245 / 0.95);
+  --silk-b: rgb(232 247 235 / 0.92);
+  --nav-glass: rgb(255 245 249 / 0.92);
+  --slot-webster-bg: rgb(255 240 245 / 0.88);
+  --slot-webster-border: rgb(232 137 168 / 0.55);
+  --slot-binghamton-bg: rgb(232 247 235 / 0.9);
+  --slot-binghamton-border: rgb(123 200 138 / 0.55);
 }
 
 @layer base {

@@ -87,6 +87,74 @@ export async function createSlot(formData: FormData) {
   return { success: true };
 }
 
+export async function updateSlot(
+  _prev: { error?: string; success?: boolean } | null,
+  formData: FormData
+): Promise<{ error?: string; success?: boolean }> {
+  const { profile } = await getSessionProfile();
+  if (!profile || profile.role !== "owner") {
+    return { error: "Only the owner can edit slots." };
+  }
+
+  const slotId = String(formData.get("slotId") ?? "").trim();
+  const startRaw = String(formData.get("startAt") ?? "");
+  const endRaw = String(formData.get("endAt") ?? "");
+  const locationRaw = String(formData.get("location") ?? "").trim();
+  const bookedName = String(formData.get("bookedName") ?? "").trim();
+  const startAt = parseBusinessDateTimeLocal(startRaw);
+  const endAt = parseBusinessDateTimeLocal(endRaw);
+
+  if (!slotId) {
+    return { error: "Missing appointment." };
+  }
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+    return { error: "Invalid date or time." };
+  }
+  if (endAt <= startAt) {
+    return { error: "End time must be after start time." };
+  }
+  if (!isAppointmentLocation(locationRaw)) {
+    return { error: "Select a location (Webster or Binghamton)." };
+  }
+
+  const supabase = await createClient();
+  const { data: existing, error: fetchError } = await supabase
+    .from("appointment_slots")
+    .select("id, status")
+    .eq("id", slotId)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+  if (!existing) {
+    return { error: "Appointment not found." };
+  }
+
+  if (existing.status === "booked" && !bookedName) {
+    return { error: "Enter a client name for booked appointments." };
+  }
+
+  const { error } = await supabase
+    .from("appointment_slots")
+    .update({
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+      location: locationRaw,
+      booked_name: existing.status === "booked" ? bookedName : null,
+    })
+    .eq("id", slotId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  await syncGoogleForSlot(slotId);
+
+  revalidatePath("/book");
+  return { success: true };
+}
+
 export async function deleteSlot(slotId: string) {
   const { profile } = await getSessionProfile();
   if (!profile || profile.role !== "owner") {

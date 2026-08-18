@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CheckCircle2, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, Pencil, Sparkles, Trash2, Undo2 } from "lucide-react";
 
 import {
   bookSlot,
@@ -10,6 +10,7 @@ import {
   createSlot,
   deleteSlot,
   releaseSlot,
+  updateSlot,
 } from "@/app/book/actions";
 import { AddToCalendarButtons } from "@/components/booking/add-to-calendar-buttons";
 import { AppointmentCalendarGrid } from "@/components/booking/appointment-calendar-grid";
@@ -34,7 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
 import { getLocationShortLabel } from "@/lib/appointment-locations";
-import { formatSlotRange } from "@/lib/dates";
+import { formatSlotRange, toLocalDatetimeInputValue } from "@/lib/dates";
 import type { Profile, SlotWithBooker } from "@/types/database";
 
 type BookingCalendarProps = {
@@ -64,6 +65,11 @@ export function BookingCalendar({
   const [slotLocation, setSlotLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [bookError, setBookError] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<SlotWithBooker | null>(null);
+  const [editStartAt, setEditStartAt] = useState("");
+  const [editEndAt, setEditEndAt] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editBookedName, setEditBookedName] = useState("");
 
   function formatDateTimeLocal(date: Date): string {
     const year = date.getFullYear();
@@ -101,6 +107,45 @@ export function BookingCalendar({
       setPreBooked(false);
       router.refresh();
       return null;
+    },
+    null
+  );
+
+  function openEditDialog(slot: SlotWithBooker) {
+    setEditTarget(slot);
+    setEditStartAt(toLocalDatetimeInputValue(slot.start_at));
+    setEditEndAt(toLocalDatetimeInputValue(slot.end_at));
+    setEditLocation(slot.location);
+    setEditBookedName(
+      slot.booked_name?.trim() ||
+        slot.booker?.full_name?.trim() ||
+        ""
+    );
+  }
+
+  function closeEditDialog() {
+    setEditTarget(null);
+    setEditStartAt("");
+    setEditEndAt("");
+    setEditLocation("");
+    setEditBookedName("");
+  }
+
+  function handleEditStartChange(startValue: string) {
+    setEditStartAt(startValue);
+    if (startValue) {
+      setEditEndAt(addOneHourFromStart(startValue));
+    }
+  }
+
+  const [updateState, updateAction, updatePending] = useActionState(
+    async (_prev: { error?: string; success?: boolean } | null, formData: FormData) => {
+      const result = await updateSlot(_prev, formData);
+      if (result?.error) return { error: result.error };
+      closeEditDialog();
+      setSelectedSlot(null);
+      router.refresh();
+      return { success: true };
     },
     null
   );
@@ -386,6 +431,16 @@ export function BookingCalendar({
             )}
 
             <div className="flex flex-wrap gap-2">
+              {isOwner && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openEditDialog(activeSlot)}
+                >
+                  <Pencil className="size-4" />
+                  Edit
+                </Button>
+              )}
               {!isOwner && isOpen && (
                 <Button size="sm" onClick={() => setBookTarget(activeSlot)}>
                   Reserve
@@ -491,6 +546,102 @@ export function BookingCalendar({
               {pending ? "Booking…" : "Confirm reservation"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(open) => {
+          if (!open) closeEditDialog();
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit appointment</DialogTitle>
+            <DialogDescription>
+              Update the time, location
+              {editTarget?.status === "booked" ? ", and client name" : ""} without
+              deleting and recreating the slot.
+            </DialogDescription>
+          </DialogHeader>
+          {editTarget && (
+            <form action={updateAction} className="grid gap-4 sm:grid-cols-2">
+              <input type="hidden" name="slotId" value={editTarget.id} />
+              <div className="space-y-2">
+                <Label htmlFor="editStartAt">Starts</Label>
+                <Input
+                  id="editStartAt"
+                  name="startAt"
+                  type="datetime-local"
+                  value={editStartAt}
+                  onChange={(event) => handleEditStartChange(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editEndAt">Ends</Label>
+                <Input
+                  id="editEndAt"
+                  name="endAt"
+                  type="datetime-local"
+                  value={editEndAt}
+                  onChange={(event) => setEditEndAt(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="editLocation">Location</Label>
+                <select
+                  id="editLocation"
+                  name="location"
+                  required
+                  value={editLocation}
+                  onChange={(event) => setEditLocation(event.target.value)}
+                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <option value="webster">Webster, NY (Rochester area)</option>
+                  <option value="binghamton">SUNY Binghamton (school year)</option>
+                </select>
+              </div>
+              {editTarget.status === "booked" && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="editBookedName">Client name</Label>
+                  <Input
+                    id="editBookedName"
+                    name="bookedName"
+                    value={editBookedName}
+                    onChange={(event) => setEditBookedName(event.target.value)}
+                    placeholder="e.g. Maddy Brown"
+                    required
+                  />
+                  {editTarget.booked_by && (
+                    <p className="text-muted-foreground text-xs">
+                      This updates how the booking appears on your calendar. The
+                      client&apos;s account name stays the same.
+                    </p>
+                  )}
+                </div>
+              )}
+              {updateState?.error && (
+                <p className="text-destructive text-sm sm:col-span-2" role="alert">
+                  {updateState.error}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2 sm:col-span-2">
+                <Button type="submit" disabled={updatePending}>
+                  {updatePending ? "Saving…" : "Save changes"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={updatePending}
+                  onClick={closeEditDialog}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 

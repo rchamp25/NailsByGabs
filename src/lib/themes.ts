@@ -12,7 +12,7 @@ export type ThemeMeta = {
   id: ThemeId;
   label: string;
   description: string;
-  swatches: [string, string, string];
+  swatches: string[];
 };
 
 export const THEME_CATALOG: ThemeMeta[] = [
@@ -31,8 +31,8 @@ export const THEME_CATALOG: ThemeMeta[] = [
   {
     id: "night-chrome",
     label: "Night Chrome",
-    description: "Midnight base with rose highlights and chrome accents.",
-    swatches: ["#0a0a0f", "#e11d48", "#d4d4d8"],
+    description: "Pastel pink and green — a lighter and bolder shade of each.",
+    swatches: ["#fff0f5", "#e889a8", "#e8f7eb", "#7bc88a"],
   },
 ];
 
