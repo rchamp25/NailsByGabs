@@ -129,6 +129,12 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
   const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar();
+  const [motionReady, setMotionReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const frame = requestAnimationFrame(() => setMotionReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   if (collapsible === "none") {
     return (
@@ -161,8 +167,10 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-[400ms] ease-emphasis",
-          "group-data-[collapsible=offcanvas]:w-0",
+          "sidebar-layout-gap relative bg-transparent",
+          motionReady && "sidebar-layout-gap--motion-ready",
+          state === "collapsed" && "sidebar-layout-gap--collapsed",
+          state === "expanded" && "sidebar-layout-gap--expanded",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
@@ -172,11 +180,11 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          "sidebar-slide-panel fixed inset-y-0 z-50 hidden h-svh w-(--sidebar-width) transition-[transform,width,left,right,box-shadow] duration-[400ms] ease-emphasis will-change-transform md:flex",
-          side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:-translate-x-full group-data-[collapsible=offcanvas]:shadow-none"
-            : "right-0 group-data-[collapsible=offcanvas]:translate-x-full group-data-[collapsible=offcanvas]:shadow-none",
-          "group-data-[state=expanded]:shadow-xl group-data-[state=expanded]:shadow-primary/5",
+          "sidebar-slide-panel fixed inset-y-0 z-50 hidden h-svh w-(--sidebar-width) md:flex",
+          motionReady && "sidebar-slide-panel--motion-ready",
+          state === "collapsed" && "sidebar-slide-panel--collapsed pointer-events-none",
+          state === "expanded" && "sidebar-slide-panel--expanded pointer-events-auto",
+          side === "left" ? "left-0" : "right-0",
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l border-sidebar-border",

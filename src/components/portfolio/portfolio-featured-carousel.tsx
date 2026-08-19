@@ -26,6 +26,10 @@ type PortfolioFeaturedCarouselProps = {
 const SCROLL_SPEED_PX_PER_SEC = 84;
 const CARD_GAP_PX = 16;
 const DRAG_CLICK_THRESHOLD_PX = 8;
+const AXIS_COMMIT_PX = 8;
+const AXIS_LOCK_RATIO = 1.15;
+
+type DragIntent = "none" | "pending" | "horizontal" | "vertical";
 
 function normalizeOffset(value: number, setWidth: number): number {
   if (setWidth <= 0) return value;
@@ -76,10 +80,13 @@ export function PortfolioFeaturedCarousel({
   const trackRef = useRef<HTMLDivElement>(null);
   const offsetRef = useRef(0);
   const setWidthRef = useRef(0);
-  const isDraggingRef = useRef(false);
+  const dragIntentRef = useRef<DragIntent>("none");
+  const activePointerIdRef = useRef<number | null>(null);
   const dragStartXRef = useRef(0);
+  const dragStartYRef = useRef(0);
   const dragStartOffsetRef = useRef(0);
   const didDragRef = useRef(false);
+  const dragRafRef = useRef(0);
   const [offset, setOffset] = useState(0);
   const [setWidth, setSetWidth] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -87,6 +94,33 @@ export function PortfolioFeaturedCarousel({
 
   const loopImages =
     images.length > 0 ? [...images, ...images] : [];
+
+  const applyOffset = useCallback((next: number, syncState = true) => {
+    offsetRef.current = next;
+    const track = trackRef.current;
+    if (track) {
+      track.style.transform = `translate3d(-${next}px, 0, 0)`;
+    }
+    if (syncState) {
+      setOffset(next);
+    }
+  }, []);
+
+  const scheduleDragOffset = useCallback(
+    (next: number) => {
+      offsetRef.current = next;
+      if (dragRafRef.current) return;
+
+      dragRafRef.current = window.requestAnimationFrame(() => {
+        dragRafRef.current = 0;
+        const track = trackRef.current;
+        if (track) {
+          track.style.transform = `translate3d(-${offsetRef.current}px, 0, 0)`;
+        }
+      });
+    },
+    []
+  );
 
   const measureSetWidth = useCallback(() => {
     const track = trackRef.current;
@@ -107,12 +141,20 @@ export function PortfolioFeaturedCarousel({
   }, [measureSetWidth]);
 
   useEffect(() => {
-    offsetRef.current = offset;
-  }, [offset]);
-
-  useEffect(() => {
     setWidthRef.current = setWidth;
   }, [setWidth]);
+
+  useEffect(() => {
+    applyOffset(offsetRef.current);
+  }, [applyOffset]);
+
+  useEffect(() => {
+    return () => {
+      if (dragRafRef.current) {
+        window.cancelAnimationFrame(dragRafRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -141,79 +183,146 @@ export function PortfolioFeaturedCarousel({
         next -= setWidth;
       }
 
-      offsetRef.current = next;
-      setOffset(next);
+      applyOffset(next);
       rafId = requestAnimationFrame(tick);
     };
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [images.length, isPaused, isDragging, setWidth]);
+  }, [images.length, isPaused, isDragging, setWidth, applyOffset]);
 
-  const shift = useCallback((direction: -1 | 1) => {
-    const track = trackRef.current;
-    const card = track?.querySelector<HTMLElement>("[data-carousel-card]");
-    const step = card ? card.offsetWidth + CARD_GAP_PX : 296;
-    const width = setWidthRef.current;
+  const shift = useCallback(
+    (direction: -1 | 1) => {
+      const track = trackRef.current;
+      const card = track?.querySelector<HTMLElement>("[data-carousel-card]");
+      const step = card ? card.offsetWidth + CARD_GAP_PX : 296;
+      const width = setWidthRef.current;
 
-    let next = offsetRef.current + direction * step;
-    if (width > 0) {
-      next = normalizeOffset(next, width);
-    }
+      let next = offsetRef.current + direction * step;
+      if (width > 0) {
+        next = normalizeOffset(next, width);
+      }
 
-    offsetRef.current = next;
-    setOffset(next);
+      applyOffset(next);
+    },
+    [applyOffset]
+  );
+
+  const resetDrag = useCallback(() => {
+    dragIntentRef.current = "none";
+    activePointerIdRef.current = null;
+    setIsDragging(false);
+    setIsPaused(false);
   }, []);
 
-  const finishDrag = useCallback(() => {
-    if (!isDraggingRef.current) return;
-
-    isDraggingRef.current = false;
-    setIsDragging(false);
+  const finishHorizontalDrag = useCallback(() => {
+    if (dragIntentRef.current !== "horizontal") {
+      resetDrag();
+      return;
+    }
 
     const width = setWidthRef.current;
     const next = normalizeOffset(offsetRef.current, width);
-    offsetRef.current = next;
-    setOffset(next);
+    applyOffset(next);
+    resetDrag();
+  }, [applyOffset, resetDrag]);
 
-    setIsPaused(false);
-  }, []);
+  const commitHorizontalDrag = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      dragIntentRef.current = "horizontal";
+      setIsDragging(true);
+      setIsPaused(true);
+      activePointerIdRef.current = event.pointerId;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    []
+  );
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
 
-    isDraggingRef.current = true;
-    didDragRef.current = false;
+    dragIntentRef.current =
+      event.pointerType === "touch" ? "pending" : "horizontal";
+    activePointerIdRef.current = event.pointerId;
     dragStartXRef.current = event.clientX;
+    dragStartYRef.current = event.clientY;
     dragStartOffsetRef.current = offsetRef.current;
-    setIsDragging(true);
-    setIsPaused(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
+    didDragRef.current = false;
+
+    if (event.pointerType === "mouse") {
+      commitHorizontalDrag(event);
+      return;
+    }
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
+    if (
+      activePointerIdRef.current !== null &&
+      event.pointerId !== activePointerIdRef.current
+    ) {
+      return;
+    }
 
-    const delta = dragStartXRef.current - event.clientX;
-    if (Math.abs(delta) > DRAG_CLICK_THRESHOLD_PX) {
+    const deltaX = dragStartXRef.current - event.clientX;
+    const deltaY = dragStartYRef.current - event.clientY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (dragIntentRef.current === "pending") {
+      if (absX < AXIS_COMMIT_PX && absY < AXIS_COMMIT_PX) {
+        return;
+      }
+
+      if (absY > absX * AXIS_LOCK_RATIO) {
+        dragIntentRef.current = "vertical";
+        activePointerIdRef.current = null;
+        return;
+      }
+
+      if (absX > absY * AXIS_LOCK_RATIO) {
+        commitHorizontalDrag(event);
+      } else {
+        return;
+      }
+    }
+
+    if (dragIntentRef.current === "vertical") {
+      return;
+    }
+
+    if (dragIntentRef.current !== "horizontal") {
+      return;
+    }
+
+    if (absX > DRAG_CLICK_THRESHOLD_PX) {
       didDragRef.current = true;
     }
 
-    let next = dragStartOffsetRef.current + delta;
-    const width = setWidthRef.current;
-    if (width > 0) {
-      next = normalizeOffset(next, width);
-    }
-
-    offsetRef.current = next;
-    setOffset(next);
+    const next = dragStartOffsetRef.current + deltaX;
+    scheduleDragOffset(next);
   };
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+    if (
+      activePointerIdRef.current !== null &&
+      event.pointerId !== activePointerIdRef.current
+    ) {
+      return;
+    }
+
+    if (
+      dragIntentRef.current === "horizontal" &&
+      event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
-    finishDrag();
+
+    if (dragIntentRef.current === "horizontal") {
+      finishHorizontalDrag();
+      return;
+    }
+
+    resetDrag();
   };
 
   const handleNavigate = useCallback(
@@ -262,7 +371,7 @@ export function PortfolioFeaturedCarousel({
 
       <div
         ref={viewportRef}
-        className="carousel-drag-viewport overflow-hidden pb-2 select-none sm:select-auto"
+        className="carousel-drag-viewport overflow-hidden pb-2 sm:select-auto"
         style={{ touchAction: "pan-y pinch-zoom" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
