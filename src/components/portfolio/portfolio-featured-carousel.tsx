@@ -17,40 +17,123 @@ type PortfolioFeaturedCarouselProps = {
   images: FeaturedImage[];
 };
 
+const SCROLL_SPEED_PX_PER_SEC = 120;
+const CARD_GAP_PX = 16;
+
+function CarouselCard({
+  image,
+  priority,
+}: {
+  image: FeaturedImage;
+  priority?: boolean;
+}) {
+  return (
+    <Link
+      href="/book"
+      data-carousel-card
+      className="motion-card relative aspect-[4/5] w-[min(78vw,280px)] shrink-0 overflow-hidden rounded-2xl border border-border/60"
+    >
+      <Image
+        src={image.src}
+        alt={`Featured ${image.title}`}
+        fill
+        sizes="280px"
+        priority={priority}
+        className="object-cover transition-transform duration-500 ease-emphasis hover:scale-[1.03]"
+        style={{ objectPosition: image.focal }}
+      />
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+        <p className="font-medium text-white">{image.title}</p>
+        <p className="text-xs text-white/75">Tap to book</p>
+      </div>
+    </Link>
+  );
+}
+
 export function PortfolioFeaturedCarousel({
   images,
 }: PortfolioFeaturedCarouselProps) {
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const [offset, setOffset] = useState(0);
+  const [setWidth, setSetWidth] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  const scrollByCard = useCallback((direction: -1 | 1) => {
-    const node = scrollerRef.current;
-    if (!node) return;
-    const card = node.querySelector<HTMLElement>("[data-carousel-card]");
-    const amount = card ? card.offsetWidth + 16 : node.clientWidth * 0.85;
+  const loopImages =
+    images.length > 0 ? [...images, ...images] : [];
 
-    if (direction === 1) {
-      const maxScroll = node.scrollWidth - node.clientWidth;
-      if (node.scrollLeft >= maxScroll - 8) {
-        node.scrollTo({ left: 0, behavior: "smooth" });
-        return;
-      }
+  const measureSetWidth = useCallback(() => {
+    const track = trackRef.current;
+    if (!track || images.length === 0) return;
+    setSetWidth(track.scrollWidth / 2);
+  }, [images.length]);
+
+  useEffect(() => {
+    measureSetWidth();
+    const track = trackRef.current;
+    if (!track) return;
+
+    const observer = new ResizeObserver(measureSetWidth);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [measureSetWidth]);
+
+  useEffect(() => {
+    offsetRef.current = offset;
+  }, [offset]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (media.matches) setIsPaused(true);
+
+    function onChange(event: MediaQueryListEvent) {
+      if (event.matches) setIsPaused(true);
     }
 
-    if (direction === -1 && node.scrollLeft <= 8) {
-      node.scrollTo({ left: node.scrollWidth, behavior: "smooth" });
-      return;
-    }
-
-    node.scrollBy({ left: direction * amount, behavior: "smooth" });
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
   }, []);
 
   useEffect(() => {
-    if (images.length <= 1 || isPaused) return;
+    if (images.length <= 1 || isPaused || setWidth <= 0) return;
 
-    const interval = window.setInterval(() => scrollByCard(1), 4000);
-    return () => window.clearInterval(interval);
-  }, [images.length, isPaused, scrollByCard]);
+    let rafId = 0;
+    let lastTime = performance.now();
+
+    const tick = (now: number) => {
+      const deltaSeconds = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      let next = offsetRef.current + SCROLL_SPEED_PX_PER_SEC * deltaSeconds;
+      if (next >= setWidth) {
+        next -= setWidth;
+      }
+
+      offsetRef.current = next;
+      setOffset(next);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [images.length, isPaused, setWidth]);
+
+  const shift = useCallback(
+    (direction: -1 | 1) => {
+      const track = trackRef.current;
+      const card = track?.querySelector<HTMLElement>("[data-carousel-card]");
+      const step = card ? card.offsetWidth + CARD_GAP_PX : 296;
+
+      let next = offsetRef.current + direction * step;
+      if (setWidth > 0) {
+        next = ((next % setWidth) + setWidth) % setWidth;
+      }
+
+      offsetRef.current = next;
+      setOffset(next);
+    },
+    [setWidth]
+  );
 
   if (images.length === 0) return null;
 
@@ -70,7 +153,7 @@ export function PortfolioFeaturedCarousel({
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => scrollByCard(-1)}
+            onClick={() => shift(-1)}
             aria-label="Previous featured set"
           >
             <ChevronLeft className="size-4" />
@@ -79,7 +162,7 @@ export function PortfolioFeaturedCarousel({
             type="button"
             variant="outline"
             size="icon"
-            onClick={() => scrollByCard(1)}
+            onClick={() => shift(1)}
             aria-label="Next featured set"
           >
             <ChevronRight className="size-4" />
@@ -88,34 +171,28 @@ export function PortfolioFeaturedCarousel({
       </div>
 
       <div
-        ref={scrollerRef}
+        className="overflow-hidden pb-2"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onFocusCapture={() => setIsPaused(true)}
         onBlurCapture={() => setIsPaused(false)}
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {images.map((image) => (
-          <Link
-            key={image.src}
-            href="/book"
-            data-carousel-card
-            className="motion-card relative aspect-[4/5] w-[min(78vw,280px)] shrink-0 snap-center overflow-hidden rounded-2xl border border-border/60"
-          >
-            <Image
-              src={image.src}
-              alt={`Featured ${image.title}`}
-              fill
-              sizes="280px"
-              className="object-cover transition-transform duration-500 ease-emphasis hover:scale-[1.03]"
-              style={{ objectPosition: image.focal }}
+        <div
+          ref={trackRef}
+          className="flex w-max gap-4"
+          style={{
+            transform: `translate3d(-${offset}px, 0, 0)`,
+            willChange: "transform",
+          }}
+        >
+          {loopImages.map((image, index) => (
+            <CarouselCard
+              key={`${image.src}-${index}`}
+              image={image}
+              priority={index < 4}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-              <p className="font-medium text-white">{image.title}</p>
-              <p className="text-xs text-white/75">Tap to book</p>
-            </div>
-          </Link>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
