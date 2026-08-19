@@ -14,6 +14,7 @@ import {
 } from "@/app/book/actions";
 import { AddToCalendarButtons } from "@/components/booking/add-to-calendar-buttons";
 import { AppointmentCalendarGrid } from "@/components/booking/appointment-calendar-grid";
+import { BookingAcknowledgementsDialog } from "@/components/booking/booking-acknowledgements-dialog";
 import { GoogleCalendarConnect } from "@/components/booking/google-calendar-connect";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
+import {
+  createEmptyAcknowledgementState,
+  type BookingAcknowledgementId,
+} from "@/lib/booking-acknowledgements";
 import { getLocationShortLabel } from "@/lib/appointment-locations";
 import { formatSlotRange, toLocalDatetimeInputValue } from "@/lib/dates";
 import type { Profile, SlotWithBooker } from "@/types/database";
@@ -58,6 +63,12 @@ export function BookingCalendar({
   const [pending, startTransition] = useTransition();
   const [selectedSlot, setSelectedSlot] = useState<SlotWithBooker | null>(null);
   const [bookTarget, setBookTarget] = useState<SlotWithBooker | null>(null);
+  const [bookingStep, setBookingStep] = useState<"notes" | "acknowledgements" | null>(
+    null
+  );
+  const [acknowledgements, setAcknowledgements] = useState(
+    createEmptyAcknowledgementState
+  );
   const [justBookedSlot, setJustBookedSlot] = useState<SlotWithBooker | null>(null);
   const [preBooked, setPreBooked] = useState(false);
   const [slotStartAt, setSlotStartAt] = useState("");
@@ -160,10 +171,49 @@ export function BookingCalendar({
       return;
     }
     setJustBookedSlot(booked);
-    setBookTarget(null);
-    setNotes("");
+    closeBookingFlow();
     setSelectedSlot(null);
     router.refresh();
+  }
+
+  function openBookingFlow(slot: SlotWithBooker) {
+    setBookTarget(slot);
+    setBookingStep("notes");
+    setNotes("");
+    setBookError(null);
+    setAcknowledgements(createEmptyAcknowledgementState());
+  }
+
+  function closeBookingFlow() {
+    setBookTarget(null);
+    setBookingStep(null);
+    setNotes("");
+    setBookError(null);
+    setAcknowledgements(createEmptyAcknowledgementState());
+  }
+
+  function proceedToAcknowledgements() {
+    setBookingStep("acknowledgements");
+    setBookError(null);
+  }
+
+  function handleAcknowledgementChange(
+    id: BookingAcknowledgementId,
+    value: boolean
+  ) {
+    setAcknowledgements((current) => ({ ...current, [id]: value }));
+  }
+
+  function handleAcknowledgementsOpenChange(open: boolean) {
+    if (!open) {
+      if (bookingStep === "acknowledgements") {
+        setBookingStep("notes");
+        setBookError(null);
+        setAcknowledgements(createEmptyAcknowledgementState());
+        return;
+      }
+      closeBookingFlow();
+    }
   }
 
   function runAction(fn: () => Promise<{ error?: string } | { success?: boolean }>) {
@@ -194,7 +244,7 @@ export function BookingCalendar({
   function handleSelectSlot(slot: SlotWithBooker) {
     setSelectedSlot(slot);
     if (!isOwner && slot.status === "open") {
-      setBookTarget(slot);
+      openBookingFlow(slot);
     }
   }
 
@@ -442,7 +492,7 @@ export function BookingCalendar({
                 </Button>
               )}
               {!isOwner && isOpen && (
-                <Button size="sm" onClick={() => setBookTarget(activeSlot)}>
+                <Button size="sm" onClick={() => openBookingFlow(activeSlot)}>
                   Reserve
                 </Button>
               )}
@@ -500,13 +550,9 @@ export function BookingCalendar({
       )}
 
       <Dialog
-        open={!!bookTarget}
+        open={!!bookTarget && bookingStep === "notes"}
         onOpenChange={(open) => {
-          if (!open) {
-            setBookTarget(null);
-            setNotes("");
-            setBookError(null);
-          }
+          if (!open) closeBookingFlow();
         }}
       >
         <DialogContent>
@@ -533,21 +579,23 @@ export function BookingCalendar({
                 rows={4}
               />
             </div>
-            {bookError && (
-              <p className="text-sm text-primary" role="alert">
-                {bookError}
-              </p>
-            )}
-            <Button
-              className="w-full"
-              disabled={pending}
-              onClick={() => startTransition(handleBook)}
-            >
-              {pending ? "Booking…" : "Confirm reservation"}
+            <Button className="w-full" onClick={proceedToAcknowledgements}>
+              Continue
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <BookingAcknowledgementsDialog
+        open={!!bookTarget && bookingStep === "acknowledgements"}
+        slot={bookTarget}
+        checked={acknowledgements}
+        onCheckedChange={handleAcknowledgementChange}
+        onOpenChange={handleAcknowledgementsOpenChange}
+        onConfirm={() => startTransition(handleBook)}
+        pending={pending}
+        error={bookError}
+      />
 
       <Dialog
         open={!!editTarget}
@@ -651,7 +699,7 @@ export function BookingCalendar({
             className="w-full rounded-full shadow-lg shadow-primary/15"
             onClick={() => {
               setSelectedSlot(nextOpenSlot);
-              setBookTarget(nextOpenSlot);
+              openBookingFlow(nextOpenSlot);
             }}
           >
             Book next available spot
