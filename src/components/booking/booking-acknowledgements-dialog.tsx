@@ -15,6 +15,7 @@ import {
   getActiveBookingAcknowledgements,
   type BookingAcknowledgementId,
 } from "@/lib/booking-acknowledgements";
+import { normalizeAppointmentLocation } from "@/lib/appointment-locations";
 import { formatSlotRange } from "@/lib/dates";
 import type { SlotWithBooker } from "@/types/database";
 
@@ -39,8 +40,11 @@ export function BookingAcknowledgementsDialog({
   pending,
   error,
 }: BookingAcknowledgementsDialogProps) {
-  const activeAcknowledgements = getActiveBookingAcknowledgements();
-  const canConfirm = allAcknowledgementsChecked(checked);
+  const location = slot
+    ? normalizeAppointmentLocation(slot.location)
+    : "webster";
+  const activeAcknowledgements = getActiveBookingAcknowledgements(location);
+  const canConfirm = allAcknowledgementsChecked(location, checked);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatOwnerSlotLabel } from "@/lib/booking-display";
 import {
   createEmptyAcknowledgementState,
+  hasBookingAcknowledgements,
   type BookingAcknowledgementId,
 } from "@/lib/booking-acknowledgements";
 import { getLocationShortLabel } from "@/lib/appointment-locations";
@@ -192,9 +193,14 @@ export function BookingCalendar({
     setAcknowledgements(createEmptyAcknowledgementState());
   }
 
-  function proceedToAcknowledgements() {
-    setBookingStep("acknowledgements");
+  function proceedFromNotes() {
+    if (!bookTarget) return;
     setBookError(null);
+    if (hasBookingAcknowledgements(bookTarget.location)) {
+      setBookingStep("acknowledgements");
+      return;
+    }
+    startTransition(handleBook);
   }
 
   function handleAcknowledgementChange(
@@ -579,8 +585,21 @@ export function BookingCalendar({
                 rows={4}
               />
             </div>
-            <Button className="w-full" onClick={proceedToAcknowledgements}>
-              Continue
+            {bookError && (
+              <p className="text-sm text-primary" role="alert">
+                {bookError}
+              </p>
+            )}
+            <Button
+              className="w-full"
+              disabled={pending}
+              onClick={proceedFromNotes}
+            >
+              {pending
+                ? "Booking…"
+                : bookTarget && hasBookingAcknowledgements(bookTarget.location)
+                  ? "Continue"
+                  : "Confirm reservation"}
             </Button>
           </div>
         </DialogContent>
