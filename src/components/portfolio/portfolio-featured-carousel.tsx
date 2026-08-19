@@ -17,7 +17,7 @@ type PortfolioFeaturedCarouselProps = {
   images: FeaturedImage[];
 };
 
-const SCROLL_SPEED_PX_PER_SEC = 120;
+const SCROLL_SPEED_PX_PER_SEC = 84;
 const CARD_GAP_PX = 16;
 
 function CarouselCard({
