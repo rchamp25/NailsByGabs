@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 
+import { AppSidebar } from "@/components/app-sidebar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PageMotion } from "@/components/page-motion";
+import { SidebarPeekTab } from "@/components/sidebar-peek-tab";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getSessionProfile } from "@/lib/auth";
 import { getActiveThemeId } from "@/lib/theme";
 import {
@@ -53,11 +56,15 @@ export default async function RootLayout({
   return (
     <html lang="en" data-theme={activeThemeId}>
       <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
-        <div className="mobile-ambient-bg flex min-h-svh flex-col">
-          <div className="flex min-h-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-10">
-            <PageMotion>{children}</PageMotion>
-          </div>
-        </div>
+        <SidebarProvider defaultOpen={false}>
+          <AppSidebar profile={profile} email={user?.email} />
+          <SidebarPeekTab />
+          <SidebarInset className="mobile-ambient-bg">
+            <div className="flex min-h-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+              <PageMotion>{children}</PageMotion>
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
         <MobileBottomNav isOwner={profile?.role === "owner"} />
       </body>
     </html>
