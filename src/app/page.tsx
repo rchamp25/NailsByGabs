@@ -2,17 +2,15 @@ import { SiteHeader } from "@/components/site-header";
 import { PortfolioFeaturedCarousel } from "@/components/portfolio/portfolio-featured-carousel";
 import { PortfolioHero } from "@/components/portfolio/portfolio-hero";
 import { PortfolioShowcase } from "@/components/portfolio/portfolio-showcase";
-import { getFeaturedPortfolioImages } from "@/lib/portfolio";
+import { portfolioImages } from "@/lib/portfolio";
 
 export default function PortfolioPage() {
-  const featured = getFeaturedPortfolioImages(5);
-
   return (
     <>
       <SiteHeader title="Portfolio" />
       <div className="page-gradient flex flex-1 flex-col gap-8 p-4 md:p-8">
         <PortfolioHero />
-        <PortfolioFeaturedCarousel images={featured} />
+        <PortfolioFeaturedCarousel images={portfolioImages} />
         <div className="max-w-3xl">
           <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-accent">
             Nail Art Gallery

@@ -28,6 +28,18 @@ export const PORTFOLIO_FILE_NAMES = [
   "IsolatedChromeNails1.jpeg",
   "Ombre1.jpeg",
   "Square1.jpeg",
+  "3DBlooming.jpg",
+  "3DFun.jpg",
+  "3DFun1.jpg",
+  "3DFun2.jpg",
+  "3DFunNails1.jpg",
+  "FrenchFun.jpg",
+  "Fruit5.jpg",
+  "Fun11.jpg",
+  "Fun12.jpg",
+  "Fun13.jpg",
+  "Fun14.jpg",
+  "FunNails6.jpg",
 ] as const;
 
 export type PortfolioTag =
@@ -143,7 +155,3 @@ export const portfolioImages: PortfolioImage[] = PORTFOLIO_FILE_NAMES.map(
     tags: detectTags(fileName),
   })
 );
-
-export function getFeaturedPortfolioImages(count = 5): PortfolioImage[] {
-  return portfolioImages.slice(0, count);
-}

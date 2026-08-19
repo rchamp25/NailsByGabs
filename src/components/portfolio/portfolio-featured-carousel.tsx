@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -21,14 +21,36 @@ export function PortfolioFeaturedCarousel({
   images,
 }: PortfolioFeaturedCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
-  function scrollByCard(direction: -1 | 1) {
+  const scrollByCard = useCallback((direction: -1 | 1) => {
     const node = scrollerRef.current;
     if (!node) return;
     const card = node.querySelector<HTMLElement>("[data-carousel-card]");
     const amount = card ? card.offsetWidth + 16 : node.clientWidth * 0.85;
+
+    if (direction === 1) {
+      const maxScroll = node.scrollWidth - node.clientWidth;
+      if (node.scrollLeft >= maxScroll - 8) {
+        node.scrollTo({ left: 0, behavior: "smooth" });
+        return;
+      }
+    }
+
+    if (direction === -1 && node.scrollLeft <= 8) {
+      node.scrollTo({ left: node.scrollWidth, behavior: "smooth" });
+      return;
+    }
+
     node.scrollBy({ left: direction * amount, behavior: "smooth" });
-  }
+  }, []);
+
+  useEffect(() => {
+    if (images.length <= 1 || isPaused) return;
+
+    const interval = window.setInterval(() => scrollByCard(1), 4000);
+    return () => window.clearInterval(interval);
+  }, [images.length, isPaused, scrollByCard]);
 
   if (images.length === 0) return null;
 
@@ -40,7 +62,7 @@ export function PortfolioFeaturedCarousel({
             Featured
           </p>
           <h3 className="font-serif mt-1 text-2xl text-primary md:text-3xl">
-            This week&apos;s favorites
+            Every set
           </h3>
         </div>
         <div className="hidden gap-2 sm:flex">
@@ -67,6 +89,10 @@ export function PortfolioFeaturedCarousel({
 
       <div
         ref={scrollerRef}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onFocusCapture={() => setIsPaused(true)}
+        onBlurCapture={() => setIsPaused(false)}
         className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {images.map((image) => (
