@@ -393,6 +393,15 @@
   overscroll-behavior-y: contain;
 }
 
+@media (min-width: 768px) {
+  .sidebar-slide-panel {
+    transition:
+      transform 400ms var(--ease-emphasis),
+      box-shadow 400ms var(--ease-emphasis),
+      width 400ms var(--ease-emphasis) !important;
+  }
+}
+
 .sidebar-peek-tab {
   align-items: center;
   justify-content: center;
@@ -404,8 +413,8 @@
   background: color-mix(in srgb, var(--muted) 92%, var(--background));
   box-shadow: 4px 0 14px -8px rgb(0 0 0 / 0.28);
   transition:
-    transform 700ms var(--ease-emphasis),
-    box-shadow 700ms var(--ease-emphasis);
+    transform 400ms var(--ease-emphasis),
+    box-shadow 400ms var(--ease-emphasis);
 }
 
 .sidebar-peek-tab:hover,

@@ -80,7 +80,6 @@ export function PortfolioFeaturedCarousel({
   const dragStartXRef = useRef(0);
   const dragStartOffsetRef = useRef(0);
   const didDragRef = useRef(false);
-  const isHoveringRef = useRef(false);
   const [offset, setOffset] = useState(0);
   const [setWidth, setSetWidth] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -177,9 +176,7 @@ export function PortfolioFeaturedCarousel({
     offsetRef.current = next;
     setOffset(next);
 
-    if (!isHoveringRef.current) {
-      setIsPaused(false);
-    }
+    setIsPaused(false);
   }, []);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -271,22 +268,6 @@ export function PortfolioFeaturedCarousel({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onMouseEnter={() => {
-          isHoveringRef.current = true;
-          setIsPaused(true);
-        }}
-        onMouseLeave={() => {
-          isHoveringRef.current = false;
-          if (!isDraggingRef.current) {
-            setIsPaused(false);
-          }
-        }}
-        onFocusCapture={() => setIsPaused(true)}
-        onBlurCapture={() => {
-          if (!isDraggingRef.current) {
-            setIsPaused(false);
-          }
-        }}
       >
         <div
           ref={trackRef}

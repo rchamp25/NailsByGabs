@@ -161,7 +161,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-700 ease-luxury",
+          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-[400ms] ease-emphasis",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -172,7 +172,7 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-50 hidden h-svh w-(--sidebar-width) transition-[transform,width,left,right,box-shadow] duration-700 ease-luxury will-change-transform md:flex",
+          "sidebar-slide-panel fixed inset-y-0 z-50 hidden h-svh w-(--sidebar-width) transition-[transform,width,left,right,box-shadow] duration-[400ms] ease-emphasis will-change-transform md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:-translate-x-full group-data-[collapsible=offcanvas]:shadow-none"
             : "right-0 group-data-[collapsible=offcanvas]:translate-x-full group-data-[collapsible=offcanvas]:shadow-none",
