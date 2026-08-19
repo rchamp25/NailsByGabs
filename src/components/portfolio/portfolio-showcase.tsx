@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ScrollReveal } from "@/components/effects/scroll-reveal";
 import {
   Dialog,
   DialogContent,
@@ -51,32 +52,35 @@ export function PortfolioShowcase() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {PORTFOLIO_TAGS.map((tag) => (
-          <Button
-            key={tag}
-            type="button"
-            variant={activeTag === tag ? "default" : "outline"}
-            size="sm"
-            className="shrink-0 rounded-full"
-            onClick={() => {
-              setActiveTag(tag);
-              setActiveIndex(null);
-            }}
-          >
-            {tag}
-          </Button>
-        ))}
-      </div>
+      <ScrollReveal>
+        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {PORTFOLIO_TAGS.map((tag) => (
+            <Button
+              key={tag}
+              type="button"
+              variant={activeTag === tag ? "default" : "outline"}
+              size="sm"
+              className="shrink-0 rounded-full"
+              onClick={() => {
+                setActiveTag(tag);
+                setActiveIndex(null);
+              }}
+            >
+              {tag}
+            </Button>
+          ))}
+        </div>
+      </ScrollReveal>
 
       <div className="columns-2 gap-4 md:columns-3 lg:gap-5">
         {filtered.map((image, index) => (
-          <PortfolioMasonryTile
-            key={image.src}
-            image={image}
-            index={index}
-            onOpen={() => openImage(index)}
-          />
+          <ScrollReveal key={image.src} className="mb-4 block w-full break-inside-avoid">
+            <PortfolioMasonryTile
+              image={image}
+              index={index}
+              onOpen={() => openImage(index)}
+            />
+          </ScrollReveal>
         ))}
       </div>
 
@@ -159,8 +163,7 @@ function PortfolioMasonryTile({
     <button
       type="button"
       onClick={onOpen}
-      className="motion-card animate-portfolio-item group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-2xl border border-border/60 text-left"
-      style={{ animationDelay: `${Math.min(index * 45, 420)}ms` }}
+      className="motion-card group relative block w-full overflow-hidden rounded-2xl border border-border/60 text-left"
     >
       <div className={cn("relative w-full", tall ? "aspect-[4/5]" : "aspect-square")}>
         <Image

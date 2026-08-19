@@ -2,6 +2,7 @@ import { Instagram, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 
 import { ProfileCard } from "@/components/effects/profile-card";
+import { ScrollReveal } from "@/components/effects/scroll-reveal";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,15 +16,18 @@ export default function AboutPage() {
       <SiteHeader title="About Gabs" />
       <div className="page-gradient flex flex-1 flex-col gap-8 p-4 md:p-8">
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
-          <ProfileCard
-            name="Gabrielle"
-            subtitle="GelX nails · Rochester & Binghamton"
-            imageSrc="/about/HeadshotGabrielle.jpeg"
-            imageAlt="Gabrielle from NailsByGabs"
-            className="max-h-[520px] lg:max-h-none"
-          />
+          <ScrollReveal>
+            <ProfileCard
+              name="Gabrielle"
+              subtitle="GelX nails · Rochester & Binghamton"
+              imageSrc="/about/HeadshotGabrielle.jpeg"
+              imageAlt="Gabrielle from NailsByGabs"
+              className="max-h-[520px] lg:max-h-none"
+            />
+          </ScrollReveal>
 
-          <div className="flex flex-col gap-6">
+          <ScrollReveal>
+            <div className="flex flex-col gap-6">
             <div>
               <p className="section-kicker text-sm uppercase tracking-widest text-accent">
                 Meet your artist
@@ -85,7 +89,8 @@ export default function AboutPage() {
                 </Link>
               </Button>
             </div>
-          </div>
+            </div>
+          </ScrollReveal>
         </div>
       </div>
     </>

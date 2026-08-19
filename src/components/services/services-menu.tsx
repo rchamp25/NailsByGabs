@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { updateServiceItem, type ServicesActionState } from "@/app/services/actions";
+import { ScrollReveal } from "@/components/effects/scroll-reveal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,10 +38,7 @@ function ServiceRow({
     const { primary, secondary } = splitServiceName(item.name);
 
     return (
-      <li
-        className="animate-list-item border-border/40 border-b py-3 last:border-0"
-        style={{ animationDelay: `${index * 40}ms` }}
-      >
+      <li className="border-border/40 border-b py-3 last:border-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="font-medium leading-snug text-foreground">{primary}</p>
@@ -141,26 +139,24 @@ export function ServicesMenu({ categories, isOwner }: ServicesMenuProps) {
           Owner mode — update prices below and click Save on each row.
         </p>
       )}
-      {categories.map((category, categoryIndex) => (
-        <section
-          key={category.id}
-          className="spotlight-card rounded-2xl border border-accent/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm md:p-6"
-          style={{ animationDelay: `${categoryIndex * 80}ms` }}
-        >
-          <h3 className="font-serif border-b border-accent/30 pb-3 text-2xl text-primary">
-            {category.title}
-          </h3>
-          <ul className="mt-2">
-            {category.items.map((item, index) => (
-              <ServiceRow
-                key={item.id}
-                item={item}
-                editable={isOwner}
-                index={index}
-              />
-            ))}
-          </ul>
-        </section>
+      {categories.map((category) => (
+        <ScrollReveal key={category.id}>
+          <section className="spotlight-card rounded-2xl border border-accent/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm md:p-6">
+            <h3 className="font-serif border-b border-accent/30 pb-3 text-2xl text-primary">
+              {category.title}
+            </h3>
+            <ul className="mt-2">
+              {category.items.map((item, index) => (
+                <ServiceRow
+                  key={item.id}
+                  item={item}
+                  editable={isOwner}
+                  index={index}
+                />
+              ))}
+            </ul>
+          </section>
+        </ScrollReveal>
       ))}
     </div>
   );

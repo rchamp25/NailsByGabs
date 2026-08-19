@@ -257,6 +257,39 @@
     min-height: min(720px, 85vh);
     -webkit-overflow-scrolling: touch;
   }
+  .scroll-reveal {
+    overflow: hidden;
+  }
+  .scroll-reveal-inner {
+    transition:
+      transform 650ms var(--ease-emphasis),
+      opacity 520ms var(--ease-emphasis);
+    will-change: transform, opacity;
+  }
+  .scroll-reveal[data-phase="visible"] .scroll-reveal-inner {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scaleY(1);
+  }
+  .scroll-reveal[data-phase="below"][data-direction="down"] .scroll-reveal-inner {
+    opacity: 0;
+    transform: translate3d(0, 2.75rem, 0) scaleY(0.9);
+    transform-origin: bottom center;
+  }
+  .scroll-reveal[data-phase="above"][data-direction="down"] .scroll-reveal-inner {
+    opacity: 0;
+    transform: translate3d(0, -2.75rem, 0) scaleY(0.88);
+    transform-origin: top center;
+  }
+  .scroll-reveal[data-phase="below"][data-direction="up"] .scroll-reveal-inner {
+    opacity: 0;
+    transform: translate3d(0, 2.75rem, 0) scaleY(0.88);
+    transform-origin: bottom center;
+  }
+  .scroll-reveal[data-phase="above"][data-direction="up"] .scroll-reveal-inner {
+    opacity: 0;
+    transform: translate3d(0, -2.75rem, 0) scaleY(0.9);
+    transform-origin: top center;
+  }
 }
 
 .silk-layer {
@@ -481,6 +514,11 @@
   .silk-layer,
   .star-border {
     animation: none !important;
+  }
+  .scroll-reveal-inner {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
   .profile-card {
     transform: none !important;

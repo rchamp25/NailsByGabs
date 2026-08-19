@@ -1,6 +1,7 @@
 import { BookingCalendar } from "@/components/booking/booking-calendar";
 import { BookingGate } from "@/components/booking/booking-gate";
 import { WelcomeBanner } from "@/components/auth/welcome-banner";
+import { ScrollReveal } from "@/components/effects/scroll-reveal";
 import { SiteHeader } from "@/components/site-header";
 import { getSessionProfile } from "@/lib/auth";
 import {
@@ -83,7 +84,8 @@ export default async function BookPage({
     <>
       <SiteHeader title="Book Appointment" />
       <div className="page-gradient flex flex-1 flex-col gap-6 p-4 pb-28 md:gap-8 md:p-8 md:pb-8">
-        <div className="max-w-3xl">
+        <ScrollReveal>
+          <div className="max-w-3xl">
           <p className="section-kicker text-muted-foreground text-sm uppercase tracking-widest text-accent">
             Appointment calendar
           </p>
@@ -108,7 +110,8 @@ export default async function BookPage({
               ))}
             </ol>
           )}
-        </div>
+          </div>
+        </ScrollReveal>
 
         <WelcomeBanner show={welcome === "1" && !!user} />
 
@@ -151,15 +154,19 @@ export default async function BookPage({
         )}
 
         {!user || !profile ? (
-          <BookingGate />
+          <ScrollReveal>
+            <BookingGate />
+          </ScrollReveal>
         ) : (
-          <BookingCalendar
-            slots={slots}
-            profile={profile}
-            userId={user.id}
-            googleConnected={googleConnected}
-            googleConfigured={googleConfigured}
-          />
+          <ScrollReveal>
+            <BookingCalendar
+              slots={slots}
+              profile={profile}
+              userId={user.id}
+              googleConnected={googleConnected}
+              googleConfigured={googleConfigured}
+            />
+          </ScrollReveal>
         )}
       </div>
     </>
