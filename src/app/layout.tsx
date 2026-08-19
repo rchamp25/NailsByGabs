@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -43,6 +43,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -55,17 +61,22 @@ export default async function RootLayout({
 
   return (
     <html lang="en" data-theme={activeThemeId}>
-      <body className={`${dmSans.variable} ${cormorant.variable} antialiased`}>
-        <SidebarProvider defaultOpen={false}>
+      <body
+        className={`${dmSans.variable} ${cormorant.variable} app-body antialiased`}
+      >
+        <SidebarProvider
+          defaultOpen={false}
+          className="!min-h-0 min-h-0 w-full flex-1 md:!min-h-svh md:h-auto"
+        >
           <AppSidebar profile={profile} email={user?.email} />
           <SidebarPeekTab />
-          <SidebarInset className="mobile-ambient-bg">
-            <div className="flex min-h-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+          <SidebarInset className="mobile-ambient-bg flex min-h-0 flex-1 flex-col overflow-hidden md:overflow-visible">
+            <div className="app-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain md:overflow-visible">
               <PageMotion>{children}</PageMotion>
             </div>
+            <MobileBottomNav isOwner={profile?.role === "owner"} />
           </SidebarInset>
         </SidebarProvider>
-        <MobileBottomNav isOwner={profile?.role === "owner"} />
       </body>
     </html>
   );

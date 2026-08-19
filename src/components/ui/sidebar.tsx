@@ -104,7 +104,7 @@ function SidebarProvider({
             } as React.CSSProperties
           }
           className={cn(
-            "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+            "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full flex-col overflow-hidden md:overflow-visible",
             className
           )}
           {...props}
@@ -128,7 +128,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar();
 
   if (collapsible === "none") {
     return (
@@ -161,7 +161,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-350 ease-luxury",
+          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-700 ease-luxury",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -172,7 +172,7 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[transform,width,left,right,box-shadow] duration-350 ease-luxury will-change-transform md:flex",
+          "fixed inset-y-0 z-50 hidden h-svh w-(--sidebar-width) transition-[transform,width,left,right,box-shadow] duration-700 ease-luxury will-change-transform md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:-translate-x-full group-data-[collapsible=offcanvas]:shadow-none"
             : "right-0 group-data-[collapsible=offcanvas]:translate-x-full group-data-[collapsible=offcanvas]:shadow-none",
@@ -182,6 +182,12 @@ function Sidebar({
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l border-sidebar-border",
           className
         )}
+        onMouseEnter={() => {
+          if (!isMobile) setOpen(true);
+        }}
+        onMouseLeave={() => {
+          if (!isMobile) setOpen(false);
+        }}
         {...props}
       >
         <div

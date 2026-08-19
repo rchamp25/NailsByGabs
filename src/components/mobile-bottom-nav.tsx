@@ -55,7 +55,7 @@ export function MobileBottomNav({ isOwner = false }: MobileBottomNavProps) {
 
   return (
     <nav
-      className="mobile-bottom-nav pill-nav-shell fixed inset-x-0 bottom-0 z-[9999] md:hidden"
+      className="mobile-bottom-nav pill-nav-shell shrink-0 md:hidden"
       aria-label="Main navigation"
     >
       <div className="relative px-2 pt-2 pb-2">
