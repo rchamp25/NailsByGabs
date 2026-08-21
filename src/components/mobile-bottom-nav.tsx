@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   CalendarHeart,
   Images,
   Palette,
@@ -22,6 +23,7 @@ const baseItems = [
 ] as const;
 
 const ownerItems = [
+  { title: "Stats", href: "/analytics", icon: BarChart3, short: "Stats" },
   { title: "Clients", href: "/clients", icon: Users, short: "Clients" },
   { title: "Theme", href: "/settings", icon: Palette, short: "Theme" },
 ] as const;

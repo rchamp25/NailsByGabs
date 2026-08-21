@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   CalendarHeart,
   Images,
   Palette,
@@ -34,6 +35,7 @@ const baseNavItems = [
 ] as const;
 
 const ownerNavItems = [
+  { title: "Analytics", href: "/analytics", icon: BarChart3 },
   { title: "Clients", href: "/clients", icon: Users },
   { title: "Appearance", href: "/settings", icon: Palette },
 ] as const;

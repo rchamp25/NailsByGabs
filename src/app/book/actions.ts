@@ -186,10 +186,9 @@ export async function releaseSlot(slotId: string) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("appointment_slots")
-    .update({ status: "open", booked_by: null, booked_name: null, notes: null })
-    .eq("id", slotId);
+  const { error } = await supabase.rpc("release_appointment_slot", {
+    p_slot_id: slotId,
+  });
 
   if (error) {
     return { error: error.message };

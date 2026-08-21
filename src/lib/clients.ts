@@ -10,6 +10,8 @@ export type OwnerClientRow = {
   email: string | null;
   emailVerified: boolean;
   createdAt: string;
+  appointmentsBooked: number;
+  appointmentsCompleted: number;
 };
 
 async function listAllAuthUsers(): Promise<User[] | null> {
@@ -53,7 +55,9 @@ export async function listOwnerClients(): Promise<{
     await Promise.all([
       admin
         .from("profiles")
-        .select("id, full_name, created_at")
+        .select(
+          "id, full_name, created_at, appointments_booked, appointments_completed"
+        )
         .eq("role", "client")
         .order("full_name"),
       listAllAuthUsers(),
@@ -80,6 +84,8 @@ export async function listOwnerClients(): Promise<{
       email: authUser?.email ?? null,
       emailVerified: !!authUser?.email_confirmed_at,
       createdAt: profile.created_at,
+      appointmentsBooked: profile.appointments_booked ?? 0,
+      appointmentsCompleted: profile.appointments_completed ?? 0,
     };
   });
 

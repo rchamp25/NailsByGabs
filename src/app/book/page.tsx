@@ -31,6 +31,8 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
       booked_name,
       notes,
       created_at,
+      booking_updated_at,
+      completed_at,
       booker:profiles!booked_by (
         full_name
       )
@@ -60,6 +62,8 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
       booked_name: row.booked_name,
       notes: row.notes,
       created_at: row.created_at,
+      booking_updated_at: row.booking_updated_at,
+      completed_at: row.completed_at,
       booker: booker ?? null,
     } satisfies SlotWithBooker;
   });
