@@ -5,7 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Hourly: mark completed appointments after their 24-hour grace window. */
+/** Daily (Vercel Hobby) or external cron: mark completed appointments after their 24-hour grace window. */
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET?.trim();
   const authHeader = request.headers.get("authorization");
