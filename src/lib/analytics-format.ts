@@ -1,3 +1,15 @@
+export type AnalyticsTimeframe = "1m" | "6m" | "1y" | "all";
+
+export const ANALYTICS_TIMEFRAME_OPTIONS: {
+  id: AnalyticsTimeframe;
+  label: string;
+}[] = [
+  { id: "1m", label: "1 month" },
+  { id: "6m", label: "6 months" },
+  { id: "1y", label: "1 year" },
+  { id: "all", label: "Entirety" },
+];
+
 export type BookingEventType =
   | "booked"
   | "cancelled"
@@ -19,7 +31,7 @@ export type SourceStats = {
 };
 
 export type MonthlyPoint = {
-  month: string;
+  key: string;
   label: string;
   completed: number;
 };
@@ -32,6 +44,8 @@ export type TopClientRow = {
 };
 
 export type AnalyticsSnapshot = {
+  timeframe: AnalyticsTimeframe;
+  timeframeLabel: string;
   trackingStartedAt: string | null;
   defaultAppointmentValueCents: number;
   totals: {

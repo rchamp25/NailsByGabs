@@ -3,13 +3,21 @@ import "server-only";
 import type { AppointmentLocation } from "@/lib/appointment-locations";
 import type {
   AnalyticsSnapshot,
+  AnalyticsTimeframe,
   BookingEventType,
   BookingSource,
+  MonthlyPoint,
 } from "@/lib/analytics-format";
+import {
+  getTimeframeLabel,
+  getTimeframeStart,
+  parseAnalyticsTimeframe,
+} from "@/lib/analytics-timeframe";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export type {
   AnalyticsSnapshot,
+  AnalyticsTimeframe,
   BookingEventType,
   BookingSource,
   LocationStats,
@@ -17,6 +25,8 @@ export type {
   SourceStats,
   TopClientRow,
 } from "@/lib/analytics-format";
+
+export { parseAnalyticsTimeframe } from "@/lib/analytics-timeframe";
 
 type BookingEventRow = {
   event_type: BookingEventType;
@@ -31,12 +41,62 @@ const MONTH_LABEL = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const DAY_LABEL = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
+
 function readConfigInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? "", 10);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export async function getAnalyticsSnapshot(): Promise<{
+function buildTrendPoints(
+  rows: BookingEventRow[],
+  timeframe: AnalyticsTimeframe
+): MonthlyPoint[] {
+  const completed = rows.filter((row) => row.event_type === "completed");
+  if (completed.length === 0) return [];
+
+  if (timeframe === "1m") {
+    const dayMap = new Map<string, number>();
+    for (const row of completed) {
+      const day = row.occurred_at.slice(0, 10);
+      dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
+    }
+    return [...dayMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, count]) => ({
+        key: day,
+        label: DAY_LABEL.format(new Date(`${day}T12:00:00`)),
+        completed: count,
+      }));
+  }
+
+  const monthMap = new Map<string, number>();
+  for (const row of completed) {
+    const month = row.occurred_at.slice(0, 7);
+    monthMap.set(month, (monthMap.get(month) ?? 0) + 1);
+  }
+
+  let entries = [...monthMap.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+  if (timeframe === "6m") {
+    entries = entries.slice(-6);
+  } else if (timeframe === "1y") {
+    entries = entries.slice(-12);
+  }
+
+  return entries.map(([month, count]) => ({
+    key: month,
+    label: MONTH_LABEL.format(new Date(`${month}-01T12:00:00`)),
+    completed: count,
+  }));
+}
+
+export async function getAnalyticsSnapshot(
+  timeframe: AnalyticsTimeframe = "all"
+): Promise<{
   snapshot: AnalyticsSnapshot | null;
   error?: string;
 }> {
@@ -49,22 +109,27 @@ export async function getAnalyticsSnapshot(): Promise<{
     };
   }
 
+  const timeframeStart = getTimeframeStart(timeframe);
+  let eventsQuery = admin
+    .from("booking_events")
+    .select("event_type, booking_source, location, client_id, occurred_at")
+    .order("occurred_at", { ascending: true });
+
+  if (timeframeStart) {
+    eventsQuery = eventsQuery.gte("occurred_at", timeframeStart.toISOString());
+  }
+
   const [{ data: configRows }, { data: events, error: eventsError }, { data: profiles }] =
     await Promise.all([
       admin.from("app_config").select("key, value").in("key", [
         "analytics_tracking_started_at",
         "default_appointment_value_cents",
       ]),
-      admin
-        .from("booking_events")
-        .select("event_type, booking_source, location, client_id, occurred_at")
-        .order("occurred_at", { ascending: true }),
+      eventsQuery,
       admin
         .from("profiles")
-        .select("id, full_name, appointments_booked, appointments_completed")
-        .eq("role", "client")
-        .order("appointments_completed", { ascending: false })
-        .limit(8),
+        .select("id, full_name")
+        .eq("role", "client"),
     ]);
 
   if (eventsError) {
@@ -101,9 +166,7 @@ export async function getAnalyticsSnapshot(): Promise<{
   const cancellationRate =
     booked > 0 ? (cancelled + released) / booked : 0;
 
-  const locationStats = (
-    location: AppointmentLocation
-  ) => {
+  const locationStats = (location: AppointmentLocation) => {
     const locBooked = countBy(
       (r) => r.event_type === "booked" && r.location === location
     );
@@ -126,35 +189,48 @@ export async function getAnalyticsSnapshot(): Promise<{
     ),
   });
 
-  const monthlyMap = new Map<string, number>();
+  const clientCounts = new Map<
+    string,
+    { booked: number; completed: number }
+  >();
   for (const row of rows) {
-    if (row.event_type !== "completed") continue;
-    const month = row.occurred_at.slice(0, 7);
-    monthlyMap.set(month, (monthlyMap.get(month) ?? 0) + 1);
+    if (!row.client_id) continue;
+    const current = clientCounts.get(row.client_id) ?? {
+      booked: 0,
+      completed: 0,
+    };
+    if (row.event_type === "booked") current.booked += 1;
+    if (row.event_type === "completed") current.completed += 1;
+    clientCounts.set(row.client_id, current);
   }
 
-  const monthlyCompleted = [...monthlyMap.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-6)
-    .map(([month, count]) => ({
-      month,
-      label: MONTH_LABEL.format(new Date(`${month}-01T12:00:00`)),
-      completed: count,
-    }));
+  const profileNames = new Map(
+    (profiles ?? []).map((p) => [p.id, p.full_name.trim() || "Client"])
+  );
 
-  const topClients = (profiles ?? [])
+  const topClients = [...clientCounts.entries()]
+    .map(([id, counts]) => ({
+      id,
+      fullName: profileNames.get(id) ?? "Client",
+      appointmentsBooked: counts.booked,
+      appointmentsCompleted: counts.completed,
+    }))
     .filter(
-      (p) => p.appointments_booked > 0 || p.appointments_completed > 0
+      (client) =>
+        client.appointmentsBooked > 0 || client.appointmentsCompleted > 0
     )
-    .map((p) => ({
-      id: p.id,
-      fullName: p.full_name.trim() || "Client",
-      appointmentsBooked: p.appointments_booked,
-      appointmentsCompleted: p.appointments_completed,
-    }));
+    .sort((a, b) => {
+      if (b.appointmentsCompleted !== a.appointmentsCompleted) {
+        return b.appointmentsCompleted - a.appointmentsCompleted;
+      }
+      return b.appointmentsBooked - a.appointmentsBooked;
+    })
+    .slice(0, 8);
 
   return {
     snapshot: {
+      timeframe,
+      timeframeLabel: getTimeframeLabel(timeframe),
       trackingStartedAt,
       defaultAppointmentValueCents,
       totals: {
@@ -175,7 +251,7 @@ export async function getAnalyticsSnapshot(): Promise<{
         platform: sourceStats("platform"),
         manual: sourceStats("manual"),
       },
-      monthlyCompleted,
+      monthlyCompleted: buildTrendPoints(rows, timeframe),
       topClients,
     },
   };

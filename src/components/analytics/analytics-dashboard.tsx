@@ -30,6 +30,14 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
   const perAppointment = formatUsdFromCents(
     snapshot.defaultAppointmentValueCents
   );
+  const trendTitle =
+    snapshot.timeframe === "1m" ? "Completed by day" : "Completed by month";
+  const trendDescription =
+    snapshot.timeframe === "1m"
+      ? `Daily completions for ${snapshot.timeframeLabel.toLowerCase()}.`
+      : snapshot.timeframe === "all"
+        ? "All completed months on record."
+        : `Monthly completions for ${snapshot.timeframeLabel.toLowerCase()}.`;
 
   const monthlyMax = Math.max(
     ...monthlyCompleted.map((point) => point.completed),
@@ -40,21 +48,22 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
     <div className="flex flex-col gap-8 pb-8">
       <ScrollReveal>
         <p className="text-muted-foreground rounded-xl border border-accent/15 bg-background/60 px-4 py-3 text-sm leading-relaxed">
-          Includes all booked appointments on record
+          Showing{" "}
+          <span className="text-foreground font-medium">
+            {snapshot.timeframeLabel.toLowerCase()}
+          </span>
           {snapshot.trackingStartedAt ? (
             <>
               {" "}
-              (earliest event{" "}
+              · earliest event{" "}
               <span className="text-foreground font-medium">
                 {formatTrackingDate(snapshot.trackingStartedAt)}
               </span>
-              )
             </>
           ) : null}
           . Estimated revenue uses{" "}
           <span className="text-foreground font-medium">{perAppointment}</span>{" "}
-          per completed appointment. Site-user stats are tied to client accounts
-          via <span className="text-foreground font-medium">booked_by</span>.
+          per completed appointment.
         </p>
       </ScrollReveal>
 
@@ -63,7 +72,7 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
           <StatCard
             label="Appointments booked"
             value={String(totals.booked)}
-            hint="All bookings on record since backfill"
+            hint={`Bookings in ${snapshot.timeframeLabel.toLowerCase()}`}
           />
         </ScrollReveal>
         <ScrollReveal>
@@ -78,7 +87,7 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
           <StatCard
             label="Site clients"
             value={String(totals.uniqueClients)}
-            hint="Unique accounts that booked online"
+            hint={`In ${snapshot.timeframeLabel.toLowerCase()}`}
           />
         </ScrollReveal>
         <ScrollReveal>
@@ -143,10 +152,10 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
         <ScrollReveal className="lg:col-span-2">
           <section className="rounded-xl border border-accent/20 bg-background/75 p-5 shadow-sm backdrop-blur-sm">
             <h3 className="font-serif text-xl text-primary md:text-2xl">
-              Completed by month
+              {trendTitle}
             </h3>
             <p className="text-muted-foreground mt-1 text-sm">
-              Last six months with completed appointments.
+              {trendDescription}
             </p>
 
             {monthlyCompleted.length === 0 ? (
@@ -164,7 +173,7 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
 
                   return (
                     <li
-                      key={point.month}
+                      key={point.key}
                       className="flex min-w-0 flex-1 flex-col items-center gap-2"
                     >
                       <span className="font-serif text-sm text-primary">
@@ -228,7 +237,7 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
             Top site clients
           </h3>
           <p className="text-muted-foreground mt-1 text-sm">
-            Clients with account bookings on record.
+            Top site clients in {snapshot.timeframeLabel.toLowerCase()}.
           </p>
 
           {topClients.length === 0 ? (
