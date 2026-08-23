@@ -45,7 +45,11 @@ function formatMonthDay(year: number, month: number, day: number): string {
 
 function getDailyXAxisLabels(points: MonthlyPoint[]): AxisLabel[] {
   const labels: AxisLabel[] = [];
-  const seen = new Set<string>();
+  const labelsByIndex = new Map<number, string>();
+
+  const setLabel = (index: number, label: string) => {
+    labelsByIndex.set(index, label);
+  };
 
   points.forEach((point, index) => {
     const { year, month, day } = parseDayKey(point.key);
@@ -53,23 +57,35 @@ function getDailyXAxisLabels(points: MonthlyPoint[]): AxisLabel[] {
     const midDay = Math.ceil(monthLength / 2);
 
     if (day === 1) {
-      const token = `${year}-${month}-start`;
-      if (!seen.has(token)) {
-        seen.add(token);
-        labels.push({ index, label: formatMonthDay(year, month, 1) });
-      }
+      setLabel(index, formatMonthDay(year, month, 1));
     }
 
     if (day === midDay) {
-      const token = `${year}-${month}-mid`;
-      if (!seen.has(token)) {
-        seen.add(token);
-        labels.push({ index, label: formatMonthDay(year, month, midDay) });
-      }
+      setLabel(index, formatMonthDay(year, month, midDay));
     }
   });
 
-  return labels;
+  if (points.length > 0) {
+    const lastIndex = points.length - 1;
+    const lastPoint = points[lastIndex]!;
+    const { year, month, day } = parseDayKey(lastPoint.key);
+    const todayLabel = formatMonthDay(year, month, day);
+    const existing = labelsByIndex.get(lastIndex);
+
+    if (existing) {
+      if (!existing.endsWith("· Today")) {
+        setLabel(lastIndex, `${existing} · Today`);
+      }
+    } else {
+      setLabel(lastIndex, `${todayLabel} · Today`);
+    }
+  }
+
+  for (const [index, label] of labelsByIndex.entries()) {
+    labels.push({ index, label });
+  }
+
+  return labels.sort((a, b) => a.index - b.index);
 }
 
 function buildYTicks(maxValue: number): number[] {
