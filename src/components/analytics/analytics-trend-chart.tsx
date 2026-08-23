@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import type { AnalyticsTimeframe, MonthlyPoint } from "@/lib/analytics-format";
 import { cn } from "@/lib/utils";
 
@@ -13,24 +15,84 @@ type PlotPoint = {
   x: number;
   y: number;
   value: number;
+};
+
+type AxisLabel = {
+  index: number;
   label: string;
 };
 
-const CHART_WIDTH = 640;
-const CHART_HEIGHT = 220;
-const PADDING = { top: 18, right: 12, bottom: 36, left: 12 };
+const MIN_CHART_WIDTH = 280;
+const MIN_CHART_HEIGHT = 220;
+const MAX_CHART_HEIGHT = 320;
 
-function buildPlotPoints(points: MonthlyPoint[]): PlotPoint[] {
-  const maxValue = Math.max(...points.map((point) => point.completed), 1);
-  const innerWidth = CHART_WIDTH - PADDING.left - PADDING.right;
-  const innerHeight = CHART_HEIGHT - PADDING.top - PADDING.bottom;
+function daysInUtcMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function parseDayKey(key: string): { year: number; month: number; day: number } {
+  const [year, month, day] = key.split("-").map(Number);
+  return { year: year!, month: month!, day: day! };
+}
+
+function formatMonthDay(year: number, month: number, day: number): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function getDailyXAxisLabels(points: MonthlyPoint[]): AxisLabel[] {
+  const labels: AxisLabel[] = [];
+  const seen = new Set<string>();
+
+  points.forEach((point, index) => {
+    const { year, month, day } = parseDayKey(point.key);
+    const monthLength = daysInUtcMonth(year, month);
+    const midDay = Math.ceil(monthLength / 2);
+
+    if (day === 1) {
+      const token = `${year}-${month}-start`;
+      if (!seen.has(token)) {
+        seen.add(token);
+        labels.push({ index, label: formatMonthDay(year, month, 1) });
+      }
+    }
+
+    if (day === midDay) {
+      const token = `${year}-${month}-mid`;
+      if (!seen.has(token)) {
+        seen.add(token);
+        labels.push({ index, label: formatMonthDay(year, month, midDay) });
+      }
+    }
+  });
+
+  return labels;
+}
+
+function buildYTicks(maxValue: number): number[] {
+  const ceiling = Math.max(maxValue, 1);
+  return Array.from({ length: ceiling + 1 }, (_, tick) => tick);
+}
+
+function buildPlotPoints(
+  points: MonthlyPoint[],
+  chartWidth: number,
+  chartHeight: number,
+  padding: { top: number; right: number; bottom: number; left: number },
+  yMax: number
+): PlotPoint[] {
+  const innerWidth = chartWidth - padding.left - padding.right;
+  const innerHeight = chartHeight - padding.top - padding.bottom;
   const step = points.length <= 1 ? 0 : innerWidth / (points.length - 1);
 
   return points.map((point, index) => {
-    const x = PADDING.left + step * index;
-    const ratio = point.completed / maxValue;
-    const y = PADDING.top + innerHeight - ratio * innerHeight;
-    return { x, y, value: point.completed, label: point.label };
+    const x = padding.left + step * index;
+    const ratio = point.completed / yMax;
+    const y = padding.top + innerHeight - ratio * innerHeight;
+    return { x, y, value: point.completed };
   });
 }
 
@@ -59,21 +121,166 @@ function buildSmoothLinePath(plotPoints: PlotPoint[]): string {
   return path;
 }
 
-function buildAreaPath(linePath: string, plotPoints: PlotPoint[]): string {
+function buildAreaPath(
+  linePath: string,
+  plotPoints: PlotPoint[],
+  baseline: number
+): string {
   if (plotPoints.length === 0) return "";
-  const baseline = CHART_HEIGHT - PADDING.bottom;
   const first = plotPoints[0]!;
   const last = plotPoints[plotPoints.length - 1]!;
   return `${linePath} L ${last.x} ${baseline} L ${first.x} ${baseline} Z`;
 }
 
-function labelStride(length: number, timeframe: AnalyticsTimeframe): number {
-  if (timeframe === "1m") {
-    if (length <= 10) return 1;
-    if (length <= 20) return 2;
-    return Math.ceil(length / 8);
-  }
-  return 1;
+function DailyLineChart({
+  points,
+  className,
+}: {
+  points: MonthlyPoint[];
+  className?: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [chartWidth, setChartWidth] = useState(MIN_CHART_WIDTH);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const updateWidth = () => {
+      setChartWidth(Math.max(node.clientWidth, MIN_CHART_WIDTH));
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const maxValue = Math.max(...points.map((point) => point.completed), 0);
+  const yMax = Math.max(maxValue, 1);
+  const yTicks = buildYTicks(yMax);
+  const xLabels = useMemo(() => getDailyXAxisLabels(points), [points]);
+
+  const chartHeight = Math.min(
+    MAX_CHART_HEIGHT,
+    Math.max(MIN_CHART_HEIGHT, chartWidth * 0.42)
+  );
+  const leftPadding = Math.max(28, String(yMax).length * 10 + 14);
+  const padding = {
+    top: 16,
+    right: 12,
+    bottom: 44,
+    left: leftPadding,
+  };
+
+  const plotPoints = buildPlotPoints(
+    points,
+    chartWidth,
+    chartHeight,
+    padding,
+    yMax
+  );
+  const baseline = chartHeight - padding.bottom;
+  const innerHeight = chartHeight - padding.top - padding.bottom;
+  const linePath = buildSmoothLinePath(plotPoints);
+  const areaPath = buildAreaPath(linePath, plotPoints, baseline);
+  const innerLeft = padding.left;
+  const innerRight = chartWidth - padding.right;
+
+  return (
+    <div ref={containerRef} className={cn("mt-6 w-full", className)}>
+      <svg
+        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+        width="100%"
+        height={chartHeight}
+        className="block overflow-visible"
+        role="img"
+        aria-label="Daily completed appointments trend line"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <linearGradient id="analytics-line-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {yTicks.map((tick) => {
+          const y =
+            padding.top + innerHeight - (tick / yMax) * innerHeight;
+          return (
+            <g key={`y-${tick}`}>
+              <line
+                x1={innerLeft}
+                x2={innerRight}
+                y1={y}
+                y2={y}
+                className="stroke-border/70"
+                strokeWidth="1"
+                strokeDasharray={tick === 0 ? undefined : "4 4"}
+              />
+              <text
+                x={padding.left - 8}
+                y={y + 4}
+                textAnchor="end"
+                className="fill-muted-foreground text-[11px]"
+              >
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+
+        <line
+          x1={innerLeft}
+          x2={innerRight}
+          y1={baseline}
+          y2={baseline}
+          className="stroke-border"
+          strokeWidth="1.25"
+        />
+
+        {areaPath ? (
+          <path d={areaPath} fill="url(#analytics-line-fill)" />
+        ) : null}
+
+        {linePath ? (
+          <path
+            d={linePath}
+            fill="none"
+            className="stroke-primary"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ) : null}
+
+        {xLabels.map(({ index, label }) => {
+          const x = plotPoints[index]?.x ?? innerLeft;
+          return (
+            <g key={`${label}-${index}`}>
+              <line
+                x1={x}
+                x2={x}
+                y1={baseline}
+                y2={baseline + 5}
+                className="stroke-muted-foreground/70"
+                strokeWidth="1"
+              />
+              <text
+                x={x}
+                y={chartHeight - 14}
+                textAnchor="middle"
+                className="fill-muted-foreground text-[11px]"
+              >
+                {label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
 }
 
 export function AnalyticsTrendChart({
@@ -82,84 +289,13 @@ export function AnalyticsTrendChart({
   className,
 }: AnalyticsTrendChartProps) {
   const maxValue = Math.max(...points.map((point) => point.completed), 1);
-  const stride = labelStride(points.length, timeframe);
 
   if (timeframe === "1m") {
-    const plotPoints = buildPlotPoints(points);
-    const linePath = buildSmoothLinePath(plotPoints);
-    const areaPath = buildAreaPath(linePath, plotPoints);
-    const baseline = CHART_HEIGHT - PADDING.bottom;
-
-    return (
-      <div className={cn("mt-6", className)}>
-        <svg
-          viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-          className="h-52 w-full overflow-visible"
-          role="img"
-          aria-label="Daily completed appointments trend line"
-        >
-          <defs>
-            <linearGradient id="analytics-line-fill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-
-          <line
-            x1={PADDING.left}
-            x2={CHART_WIDTH - PADDING.right}
-            y1={baseline}
-            y2={baseline}
-            className="stroke-border/80"
-            strokeWidth="1"
-          />
-
-          {areaPath ? (
-            <path d={areaPath} fill="url(#analytics-line-fill)" />
-          ) : null}
-
-          {linePath ? (
-            <path
-              d={linePath}
-              fill="none"
-              className="stroke-primary"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : null}
-
-          {plotPoints.map((point, index) => (
-            <g key={`${point.label}-${index}`}>
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={point.value > 0 ? 3.5 : 2.5}
-                className={
-                  point.value > 0 ? "fill-accent stroke-background" : "fill-muted"
-                }
-                strokeWidth="1.5"
-              />
-              {index % stride === 0 || index === plotPoints.length - 1 ? (
-                <text
-                  x={point.x}
-                  y={CHART_HEIGHT - 10}
-                  textAnchor="middle"
-                  className="fill-muted-foreground text-[10px]"
-                >
-                  {points[index]?.label.split(" ").slice(1).join(" ") ||
-                    points[index]?.label}
-                </text>
-              ) : null}
-            </g>
-          ))}
-        </svg>
-      </div>
-    );
+    return <DailyLineChart points={points} className={className} />;
   }
 
   return (
-    <ul className={cn("mt-6 flex items-end gap-2 sm:gap-3", className)}>
+    <ul className={cn("mt-6 flex w-full items-end gap-1.5 sm:gap-3", className)}>
       {points.map((point) => {
         const height = `${Math.max(
           (point.completed / maxValue) * 100,
@@ -173,13 +309,13 @@ export function AnalyticsTrendChart({
           >
             <span
               className={cn(
-                "font-serif text-sm",
+                "font-serif text-xs sm:text-sm",
                 point.completed > 0 ? "text-primary" : "text-muted-foreground"
               )}
             >
               {point.completed}
             </span>
-            <div className="flex h-36 w-full items-end">
+            <div className="flex h-32 w-full items-end sm:h-36">
               <div
                 className={cn(
                   "w-full rounded-t-md transition-[height] duration-700 ease-emphasis",
@@ -190,7 +326,7 @@ export function AnalyticsTrendChart({
                 style={{ height }}
               />
             </div>
-            <span className="text-muted-foreground text-center text-[10px] leading-tight">
+            <span className="text-muted-foreground text-center text-[9px] leading-tight sm:text-[10px]">
               {point.label}
             </span>
           </li>
