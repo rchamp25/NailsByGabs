@@ -6,8 +6,8 @@ import type {
   AnalyticsTimeframe,
   BookingEventType,
   BookingSource,
-  MonthlyPoint,
 } from "@/lib/analytics-format";
+import { buildTrendPoints } from "@/lib/analytics-trend";
 import {
   getTimeframeLabel,
   getTimeframeStart,
@@ -36,62 +36,9 @@ type BookingEventRow = {
   occurred_at: string;
 };
 
-const MONTH_LABEL = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  year: "numeric",
-});
-
-const DAY_LABEL = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-});
-
 function readConfigInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? "", 10);
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function buildTrendPoints(
-  rows: BookingEventRow[],
-  timeframe: AnalyticsTimeframe
-): MonthlyPoint[] {
-  const completed = rows.filter((row) => row.event_type === "completed");
-  if (completed.length === 0) return [];
-
-  if (timeframe === "1m") {
-    const dayMap = new Map<string, number>();
-    for (const row of completed) {
-      const day = row.occurred_at.slice(0, 10);
-      dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
-    }
-    return [...dayMap.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([day, count]) => ({
-        key: day,
-        label: DAY_LABEL.format(new Date(`${day}T12:00:00`)),
-        completed: count,
-      }));
-  }
-
-  const monthMap = new Map<string, number>();
-  for (const row of completed) {
-    const month = row.occurred_at.slice(0, 7);
-    monthMap.set(month, (monthMap.get(month) ?? 0) + 1);
-  }
-
-  let entries = [...monthMap.entries()].sort(([a], [b]) => a.localeCompare(b));
-
-  if (timeframe === "6m") {
-    entries = entries.slice(-6);
-  } else if (timeframe === "1y") {
-    entries = entries.slice(-12);
-  }
-
-  return entries.map(([month, count]) => ({
-    key: month,
-    label: MONTH_LABEL.format(new Date(`${month}-01T12:00:00`)),
-    completed: count,
-  }));
 }
 
 export async function getAnalyticsSnapshot(
@@ -251,7 +198,11 @@ export async function getAnalyticsSnapshot(
         platform: sourceStats("platform"),
         manual: sourceStats("manual"),
       },
-      monthlyCompleted: buildTrendPoints(rows, timeframe),
+      monthlyCompleted: buildTrendPoints(
+        rows,
+        timeframe,
+        timeframeStart
+      ),
       topClients,
     },
   };

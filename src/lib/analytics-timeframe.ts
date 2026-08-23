@@ -12,15 +12,27 @@ export function parseAnalyticsTimeframe(
 export function getTimeframeStart(timeframe: AnalyticsTimeframe): Date | null {
   if (timeframe === "all") return null;
 
-  const start = new Date();
+  const now = new Date();
+
   if (timeframe === "1m") {
-    start.setMonth(start.getMonth() - 1);
-  } else if (timeframe === "6m") {
-    start.setMonth(start.getMonth() - 6);
-  } else if (timeframe === "1y") {
-    start.setFullYear(start.getFullYear() - 1);
+    return new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 30)
+    );
   }
-  return start;
+
+  if (timeframe === "6m") {
+    return new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 6, now.getUTCDate())
+    );
+  }
+
+  if (timeframe === "1y") {
+    return new Date(
+      Date.UTC(now.getUTCFullYear() - 1, now.getUTCMonth(), now.getUTCDate())
+    );
+  }
+
+  return null;
 }
 
 export function getTimeframeLabel(timeframe: AnalyticsTimeframe): string {

@@ -1,6 +1,7 @@
 "use client";
 
 import { ScrollReveal } from "@/components/effects/scroll-reveal";
+import { AnalyticsTrendChart } from "@/components/analytics/analytics-trend-chart";
 import { SplitBarChart } from "@/components/analytics/split-bar-chart";
 import { StatCard } from "@/components/analytics/stat-card";
 import type { AnalyticsSnapshot } from "@/lib/analytics-format";
@@ -34,15 +35,12 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
     snapshot.timeframe === "1m" ? "Completed by day" : "Completed by month";
   const trendDescription =
     snapshot.timeframe === "1m"
-      ? `Daily completions for ${snapshot.timeframeLabel.toLowerCase()}.`
+      ? `Every day in ${snapshot.timeframeLabel.toLowerCase()}, including days with zero completions.`
       : snapshot.timeframe === "all"
-        ? "All completed months on record."
-        : `Monthly completions for ${snapshot.timeframeLabel.toLowerCase()}.`;
+        ? "All completed months on record, including empty months."
+        : `Each month in ${snapshot.timeframeLabel.toLowerCase()}, including months with zero completions.`;
 
-  const monthlyMax = Math.max(
-    ...monthlyCompleted.map((point) => point.completed),
-    1
-  );
+  const hasAnyCompletions = monthlyCompleted.some((point) => point.completed > 0);
 
   return (
     <div className="flex flex-col gap-8 pb-8">
@@ -163,36 +161,19 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
                 No completed appointments yet — stats will appear here after
                 appointments finish their 24-hour completion window.
               </p>
-            ) : (
-              <ul className="mt-6 flex items-end gap-3">
-                {monthlyCompleted.map((point) => {
-                  const height = `${Math.max(
-                    (point.completed / monthlyMax) * 100,
-                    point.completed > 0 ? 12 : 0
-                  )}%`;
+            ) : !hasAnyCompletions ? (
+              <p className="text-muted-foreground mt-4 text-sm">
+                No completions in this period yet — the chart shows the full
+                timeframe at zero.
+              </p>
+            ) : null}
 
-                  return (
-                    <li
-                      key={point.key}
-                      className="flex min-w-0 flex-1 flex-col items-center gap-2"
-                    >
-                      <span className="font-serif text-sm text-primary">
-                        {point.completed}
-                      </span>
-                      <div className="flex h-36 w-full items-end">
-                        <div
-                          className="w-full rounded-t-md bg-gradient-to-t from-primary/85 to-accent/70 transition-[height] duration-700 ease-emphasis"
-                          style={{ height }}
-                        />
-                      </div>
-                      <span className="text-muted-foreground text-center text-[10px] leading-tight">
-                        {point.label}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            {monthlyCompleted.length > 0 ? (
+              <AnalyticsTrendChart
+                points={monthlyCompleted}
+                timeframe={snapshot.timeframe}
+              />
+            ) : null}
           </section>
         </ScrollReveal>
 
