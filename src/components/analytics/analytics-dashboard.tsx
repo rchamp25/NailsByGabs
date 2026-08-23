@@ -35,12 +35,10 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
     snapshot.timeframe === "1m" ? "Completed by day" : "Completed by month";
   const trendDescription =
     snapshot.timeframe === "1m"
-      ? `Every day in ${snapshot.timeframeLabel.toLowerCase()}, including days with zero completions.`
+      ? `Daily completions for ${snapshot.timeframeLabel.toLowerCase()}.`
       : snapshot.timeframe === "all"
-        ? "All completed months on record, including empty months."
-        : `Each month in ${snapshot.timeframeLabel.toLowerCase()}, including months with zero completions.`;
-
-  const hasAnyCompletions = monthlyCompleted.some((point) => point.completed > 0);
+        ? "All completed months on record."
+        : `Monthly completions for ${snapshot.timeframeLabel.toLowerCase()}.`;
 
   return (
     <div className="flex flex-col gap-8 pb-8">
@@ -160,11 +158,6 @@ export function AnalyticsDashboard({ snapshot }: AnalyticsDashboardProps) {
               <p className="text-muted-foreground mt-8 text-sm">
                 No completed appointments yet — stats will appear here after
                 appointments finish their 24-hour completion window.
-              </p>
-            ) : !hasAnyCompletions ? (
-              <p className="text-muted-foreground mt-4 text-sm">
-                No completions in this period yet — the chart shows the full
-                timeframe at zero.
               </p>
             ) : null}
 

@@ -67,17 +67,10 @@ function getDailyXAxisLabels(points: MonthlyPoint[]): AxisLabel[] {
 
   if (points.length > 0) {
     const lastIndex = points.length - 1;
-    const lastPoint = points[lastIndex]!;
-    const { year, month, day } = parseDayKey(lastPoint.key);
-    const todayLabel = formatMonthDay(year, month, day);
-    const existing = labelsByIndex.get(lastIndex);
-
-    if (existing) {
-      if (!existing.endsWith("· Today")) {
-        setLabel(lastIndex, `${existing} · Today`);
-      }
-    } else {
-      setLabel(lastIndex, `${todayLabel} · Today`);
+    if (!labelsByIndex.has(lastIndex)) {
+      const lastPoint = points[lastIndex]!;
+      const { year, month, day } = parseDayKey(lastPoint.key);
+      setLabel(lastIndex, formatMonthDay(year, month, day));
     }
   }
 
