@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { PanelLeftIcon } from "lucide-react";
+import { ChevronLeft, PanelLeftIcon } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -165,13 +165,15 @@ function Sidebar({
       data-slot="sidebar"
     >
       {state === "collapsed" ? (
-        <div
-          className="sidebar-hover-zone"
+        <button
+          type="button"
+          className="sidebar-hover-tab"
           onMouseEnter={() => setOpen(true)}
           onFocus={() => setOpen(true)}
-          tabIndex={0}
           aria-label="Open navigation"
-        />
+        >
+          <ChevronLeft className="size-4 text-primary" aria-hidden />
+        </button>
       ) : null}
       <div
         data-slot="sidebar-gap"
