@@ -17,6 +17,8 @@ type BookingNotificationDetails = {
   notes: string | null;
 };
 
+export type { BookingNotificationDetails };
+
 /** Load slot details before cancel_my_booking clears booked_by and notes. */
 export async function readBookingNotificationDetails(
   slotId: string
@@ -136,6 +138,33 @@ function buildClientConfirmationHtml(
       </p>
       <p style="margin-top:24px;font-size:14px;color:#6b4a55">
         Need to change plans? Sign in on the site and cancel from your booking on the calendar.
+      </p>
+    </div>
+  `;
+}
+
+function buildClientReminderHtml(details: BookingNotificationDetails): string {
+  const siteUrl = getSiteUrl();
+  const greeting = clientGreetingName(details.bookerFullName);
+  return `
+    <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
+      <h2 style="color:#c62828">Appointment reminder</h2>
+      <p>Hi ${greeting},</p>
+      <p>This is a friendly reminder that your <strong>NailsByGabs</strong> appointment is coming up in about 48 hours.</p>
+      <p><strong>When:</strong> ${details.timeRange}</p>
+      <p><strong>Location:</strong> ${details.locationLabel}</p>
+      ${
+        details.notes
+          ? `<p><strong>Your notes:</strong> ${details.notes}</p>`
+          : ""
+      }
+      <p style="margin-top:24px">
+        <a href="${siteUrl}/book" style="background:#c62828;color:#fff8fa;padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid #c9a227">
+          View or manage booking
+        </a>
+      </p>
+      <p style="margin-top:24px;font-size:14px;color:#6b4a55">
+        Need to reschedule? Sign in on the site and cancel from your booking on the calendar.
       </p>
     </div>
   `;
@@ -267,6 +296,29 @@ export async function notifyClientOfBooking(
     );
   } catch {
     // Booking should succeed even if email fails
+  }
+}
+
+/** 48-hour reminder email to the booked client. Returns whether Resend accepted the send. */
+export async function notifyClientOfAppointmentReminder(
+  details: BookingNotificationDetails,
+  clientEmail: string | undefined
+): Promise<boolean> {
+  try {
+    if (!isValidRecipientEmail(clientEmail)) {
+      console.error(
+        "[notifications] Skipped appointment reminder: no valid client email"
+      );
+      return false;
+    }
+
+    return sendEmail(
+      clientEmail,
+      `Reminder: appointment in 2 days — ${details.timeRange}`,
+      buildClientReminderHtml(details)
+    );
+  } catch {
+    return false;
   }
 }
 

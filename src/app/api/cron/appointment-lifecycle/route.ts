@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { sendDueAppointmentReminders } from "@/lib/appointment-reminders";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Daily (Vercel Hobby) or external cron: mark completed appointments after their 24-hour grace window. */
+/** Daily cron: mark completed appointments and send 48-hour client reminders. */
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET?.trim();
   const authHeader = request.headers.get("authorization");
@@ -31,7 +32,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: completeError.message }, { status: 500 });
   }
 
+  const reminders = await sendDueAppointmentReminders();
+
   return NextResponse.json({
     completed: completedCount ?? 0,
+    reminders,
   });
 }
