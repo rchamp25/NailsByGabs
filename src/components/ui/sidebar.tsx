@@ -164,6 +164,15 @@ function Sidebar({
       data-side={side}
       data-slot="sidebar"
     >
+      {state === "collapsed" ? (
+        <div
+          className="sidebar-hover-zone"
+          onMouseEnter={() => setOpen(true)}
+          onFocus={() => setOpen(true)}
+          tabIndex={0}
+          aria-label="Open navigation"
+        />
+      ) : null}
       <div
         data-slot="sidebar-gap"
         className={cn(

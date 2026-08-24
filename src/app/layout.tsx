@@ -4,7 +4,6 @@ import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PageMotion } from "@/components/page-motion";
-import { SidebarPeekTab } from "@/components/sidebar-peek-tab";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getSessionProfile } from "@/lib/auth";
 import { getActiveThemeId } from "@/lib/theme";
@@ -69,7 +68,6 @@ export default async function RootLayout({
           className="!min-h-0 min-h-0 w-full flex-1 md:!min-h-svh md:h-auto"
         >
           <AppSidebar profile={profile} email={user?.email} />
-          <SidebarPeekTab />
           <SidebarInset className="mobile-ambient-bg flex min-h-0 flex-1 flex-col overflow-hidden md:overflow-visible">
             <div className="app-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain md:overflow-visible">
               <PageMotion>{children}</PageMotion>
