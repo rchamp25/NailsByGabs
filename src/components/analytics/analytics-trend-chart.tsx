@@ -17,6 +17,12 @@ type PlotPoint = {
   value: number;
 };
 
+type HoverState = {
+  index: number;
+  clientX: number;
+  clientY: number;
+};
+
 type AxisLabel = {
   index: number;
   label: string;
@@ -141,6 +147,30 @@ function buildAreaPath(
   return `${linePath} L ${last.x} ${baseline} L ${first.x} ${baseline} Z`;
 }
 
+function getNearestPointIndex(
+  mouseXInViewBox: number,
+  plotPoints: PlotPoint[]
+): number {
+  if (plotPoints.length === 0) return 0;
+
+  let nearestIndex = 0;
+  let nearestDistance = Infinity;
+
+  plotPoints.forEach((point, index) => {
+    const distance = Math.abs(point.x - mouseXInViewBox);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = index;
+    }
+  });
+
+  return nearestIndex;
+}
+
+function formatAppointmentCount(count: number): string {
+  return count === 1 ? "1 appointment" : `${count} appointments`;
+}
+
 function DailyLineChart({
   points,
   className,
@@ -149,7 +179,9 @@ function DailyLineChart({
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [chartWidth, setChartWidth] = useState(MIN_CHART_WIDTH);
+  const [hover, setHover] = useState<HoverState | null>(null);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -195,10 +227,36 @@ function DailyLineChart({
   const areaPath = buildAreaPath(linePath, plotPoints, baseline);
   const innerLeft = padding.left;
   const innerRight = chartWidth - padding.right;
+  const activePoint =
+    hover !== null ? (plotPoints[hover.index] ?? null) : null;
+  const activeDay = hover !== null ? (points[hover.index] ?? null) : null;
+
+  const handlePointerMove = (
+    event: React.PointerEvent<SVGRectElement | SVGSVGElement>
+  ) => {
+    const svg = svgRef.current;
+    const container = containerRef.current;
+    if (!svg || !container || plotPoints.length === 0) return;
+
+    const svgRect = svg.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const mouseXInViewBox =
+      ((event.clientX - svgRect.left) / svgRect.width) * chartWidth;
+    const index = getNearestPointIndex(mouseXInViewBox, plotPoints);
+
+    setHover({
+      index,
+      clientX: event.clientX - containerRect.left,
+      clientY: event.clientY - containerRect.top,
+    });
+  };
+
+  const clearHover = () => setHover(null);
 
   return (
-    <div ref={containerRef} className={cn("mt-6 w-full", className)}>
+    <div ref={containerRef} className={cn("relative mt-6 w-full", className)}>
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         width="100%"
         height={chartHeight}
@@ -206,6 +264,7 @@ function DailyLineChart({
         role="img"
         aria-label="Daily completed appointments trend line"
         preserveAspectRatio="xMidYMid meet"
+        onPointerLeave={clearHover}
       >
         <defs>
           <linearGradient id="analytics-line-fill" x1="0" x2="0" y1="0" y2="1">
@@ -264,6 +323,39 @@ function DailyLineChart({
           />
         ) : null}
 
+        {activePoint ? (
+          <g aria-hidden>
+            <line
+              x1={activePoint.x}
+              x2={activePoint.x}
+              y1={padding.top}
+              y2={baseline}
+              className="stroke-primary/35"
+              strokeWidth="1.5"
+              strokeDasharray="4 4"
+            />
+            <circle
+              cx={activePoint.x}
+              cy={activePoint.y}
+              r="4.5"
+              className="fill-primary stroke-background"
+              strokeWidth="2"
+            />
+          </g>
+        ) : null}
+
+        <rect
+          x={innerLeft}
+          y={padding.top}
+          width={Math.max(innerRight - innerLeft, 0)}
+          height={innerHeight}
+          fill="transparent"
+          className="cursor-crosshair"
+          onPointerMove={handlePointerMove}
+          onPointerDown={handlePointerMove}
+          onPointerLeave={clearHover}
+        />
+
         {xLabels.map(({ index, label }) => {
           const x = plotPoints[index]?.x ?? innerLeft;
           return (
@@ -288,6 +380,25 @@ function DailyLineChart({
           );
         })}
       </svg>
+
+      {activeDay && hover ? (
+        <div
+          className="pointer-events-none absolute z-10 -translate-x-1/2"
+          style={{
+            left: hover.clientX,
+            top: hover.clientY + 14,
+          }}
+        >
+          <div className="rounded-lg border border-accent/25 bg-background/95 px-3 py-2 shadow-lg backdrop-blur-sm">
+            <p className="text-foreground text-sm font-medium whitespace-nowrap">
+              {activeDay.label}
+            </p>
+            <p className="text-muted-foreground text-xs whitespace-nowrap">
+              {formatAppointmentCount(activeDay.completed)}
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
