@@ -55,15 +55,17 @@ export default function AboutPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-4 text-sm">
-                  <a
-                    href={`tel:${location.phone.replace(/\D/g, "")}`}
-                    className="text-muted-foreground hover:text-primary flex items-center gap-2 transition-colors"
-                  >
-                    <Phone className="size-4 text-accent" />
-                    {location.phone}
-                  </a>
-                </div>
+                {location.phone && (
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <a
+                      href={`tel:${location.phone.replace(/\D/g, "")}`}
+                      className="text-muted-foreground hover:text-primary flex items-center gap-2 transition-colors"
+                    >
+                      <Phone className="size-4 text-accent" />
+                      {location.phone}
+                    </a>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

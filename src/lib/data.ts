@@ -7,7 +7,7 @@ Doing nails is way for me to be creative, have fun, and most of all make all of 
   location: {
     address: "Rochester, NY area",
     city: "Webster, NY + SUNY Binghamton (school year)",
-    phone: "",
+    phone: process.env.NEXT_PUBLIC_OWNER_PHONE?.trim() ?? "",
     email: "",
   },
   social: {
