@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 function isValidNotificationEmail(email: string | undefined | null): email is string {
   const trimmed = email?.trim();
@@ -13,7 +13,12 @@ async function readAppConfigEmails(): Promise<{
   notificationEmail: string | null;
   ownerEmail: string | null;
 }> {
-  const supabase = await createClient();
+  // app_config is owner-only under RLS; this runs during client bookings.
+  const supabase = createServiceRoleClient();
+  if (!supabase) {
+    return { notificationEmail: null, ownerEmail: null };
+  }
+
   const { data, error } = await supabase
     .from("app_config")
     .select("key, value")

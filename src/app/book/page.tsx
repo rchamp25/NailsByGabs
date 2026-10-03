@@ -14,7 +14,10 @@ import {
 } from "@/lib/appointment-locations";
 import type { SlotWithBooker } from "@/types/database";
 
-async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
+async function getUpcomingSlots(
+  userId: string,
+  isOwner: boolean
+): Promise<SlotWithBooker[]> {
   const supabase = await createClient();
   const now = new Date().toISOString();
 
@@ -45,12 +48,17 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
     return [];
   }
 
-  return data.map((row) => {
+  const slots = data.map((row) => {
     const bookerRaw = row.booker as
       | { full_name: string }
       | { full_name: string }[]
       | null;
     const booker = Array.isArray(bookerRaw) ? bookerRaw[0] : bookerRaw;
+
+    // Never send another client's name or notes to a client's browser.
+    if (!isOwner && row.status === "booked" && row.booked_by !== userId) {
+      return takenSlot(row);
+    }
 
     return {
       id: row.id,
@@ -67,6 +75,56 @@ async function getUpcomingSlots(): Promise<SlotWithBooker[]> {
       booker: booker ?? null,
     } satisfies SlotWithBooker;
   });
+
+  if (isOwner) {
+    return slots;
+  }
+
+  // RLS hides other clients' bookings; fetch them as times only.
+  const { data: taken, error: takenError } = await supabase.rpc(
+    "get_taken_slots"
+  );
+
+  if (takenError || !taken) {
+    if (takenError) {
+      console.error("[book] get_taken_slots failed:", takenError.message);
+    }
+    return slots;
+  }
+
+  const seen = new Set(slots.map((slot) => slot.id));
+  const merged = [
+    ...slots,
+    ...(taken as TakenSlotRow[])
+      .filter((row) => !seen.has(row.id))
+      .map(takenSlot),
+  ];
+
+  return merged.sort((a, b) => a.start_at.localeCompare(b.start_at));
+}
+
+type TakenSlotRow = {
+  id: string;
+  start_at: string;
+  end_at: string;
+  location: string | null;
+};
+
+function takenSlot(row: TakenSlotRow): SlotWithBooker {
+  return {
+    id: row.id,
+    start_at: row.start_at,
+    end_at: row.end_at,
+    status: "booked",
+    location: normalizeAppointmentLocation(row.location),
+    booked_by: null,
+    booked_name: null,
+    notes: null,
+    created_at: row.start_at,
+    booking_updated_at: null,
+    completed_at: null,
+    booker: null,
+  };
 }
 
 export default async function BookPage({
@@ -76,7 +134,10 @@ export default async function BookPage({
 }) {
   const { user, profile } = await getSessionProfile();
   const { welcome, google } = await searchParams;
-  const slots = user && profile ? await getUpcomingSlots() : [];
+  const slots =
+    user && profile
+      ? await getUpcomingSlots(user.id, profile.role === "owner")
+      : [];
 
   const googleConnected =
     profile?.role === "owner" && user

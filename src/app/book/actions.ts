@@ -15,10 +15,15 @@ import {
   notifyOwnerOfCancellation,
   readBookingNotificationDetails,
 } from "@/lib/notifications";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 async function getOwnerProfileId(): Promise<string | null> {
-  const supabase = await createClient();
+  // Clients cannot read the owner's profile under RLS; Google sync needs the
+  // service role anyway, so skip sync when it is not configured.
+  const supabase = createServiceRoleClient();
+  if (!supabase) return null;
+
   const { data } = await supabase
     .from("profiles")
     .select("id")
