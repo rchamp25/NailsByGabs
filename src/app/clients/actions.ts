@@ -1,6 +1,6 @@
 "use server";
 
-import { getSessionProfile } from "@/lib/auth";
+import { getOwnerSession } from "@/lib/auth";
 import { getAuthCallbackUrl, getPasswordResetCallbackUrl } from "@/lib/site-url";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -16,8 +16,7 @@ export async function sendClientPasswordReset(
   _prev: ClientsActionState | null,
   formData: FormData
 ): Promise<ClientsActionState> {
-  const { profile } = await getSessionProfile();
-  if (!profile || profile.role !== "owner") {
+  if (!(await getOwnerSession())) {
     return { error: "Only the owner can send password reset emails." };
   }
 
@@ -68,8 +67,7 @@ export async function sendClientVerificationEmail(
   _prev: ClientsActionState | null,
   formData: FormData
 ): Promise<ClientsActionState> {
-  const { profile } = await getSessionProfile();
-  if (!profile || profile.role !== "owner") {
+  if (!(await getOwnerSession())) {
     return { error: "Only the owner can resend verification emails." };
   }
 

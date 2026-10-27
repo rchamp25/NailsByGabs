@@ -20,8 +20,9 @@ export default function AboutPage() {
             <ProfileCard
               name="Gabrielle"
               subtitle="GelX nails · Rochester & Binghamton"
-              imageSrc="/about/HeadshotGabrielle.jpeg"
-              imageAlt="Gabrielle from NailsByGabs"
+              imageSrc="/about/NailsByGabsAboutPhoto.webp"
+              imageAlt="Gabs smiling, holding a nail polish brush and bottle"
+              imagePosition="47% 35%"
               className="max-h-[520px] lg:max-h-none"
             />
           </ScrollReveal>

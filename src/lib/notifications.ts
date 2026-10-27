@@ -5,7 +5,10 @@ import { formatOwnerSlotLabel } from "@/lib/booking-display";
 import { formatSlotRange } from "@/lib/dates";
 import { getOwnerNotificationEmail } from "@/lib/owner-contact";
 import { getSiteUrl } from "@/lib/site-url";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveThemeId } from "@/lib/theme";
+import { getThemeMeta, type EmailPalette } from "@/lib/themes";
 
 type BookingNotificationDetails = {
   /** Owner-facing label (e.g. "Jane's Nails"). */
@@ -64,48 +67,87 @@ async function getBookingDetails(
   };
 }
 
-function buildOwnerEmailHtml(details: BookingNotificationDetails): string {
+/** Client names and notes are user input; escape everything interpolated into email HTML. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Colors of the owner-selected site theme, so emails match the website. */
+async function getEmailPalette(): Promise<EmailPalette> {
+  return getThemeMeta(await getActiveThemeId()).email;
+}
+
+function buildEmailHtml(
+  palette: EmailPalette,
+  {
+    heading,
+    body,
+    ctaLabel,
+    footer,
+  }: { heading: string; body: string; ctaLabel: string; footer?: string }
+): string {
   const siteUrl = getSiteUrl();
   return `
-    <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
-      <h2 style="color:#c62828">New appointment booked</h2>
-      <p><strong>${details.clientName}</strong> just reserved a slot on NailsByGabs.</p>
-      <p><strong>When:</strong> ${details.timeRange}</p>
-      <p><strong>Location:</strong> ${details.locationLabel}</p>
-      ${
-        details.notes
-          ? `<p><strong>Client notes:</strong> ${details.notes}</p>`
-          : ""
-      }
+    <div style="font-family:Georgia,serif;color:${palette.text};background:${palette.background};max-width:480px;padding:24px;border-radius:12px;border:1px solid ${palette.accent}">
+      <h2 style="color:${palette.primary};margin-top:0">${heading}</h2>
+      ${body}
       <p style="margin-top:24px">
-        <a href="${siteUrl}/book" style="background:#c62828;color:#fff8fa;padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid #c9a227">
-          View calendar
+        <a href="${siteUrl}/book" style="background:${palette.primary};color:${palette.primaryText};padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid ${palette.accent}">
+          ${ctaLabel}
         </a>
       </p>
+      ${
+        footer
+          ? `<p style="margin-top:24px;margin-bottom:0;font-size:14px;color:${palette.muted}">${footer}</p>`
+          : ""
+      }
     </div>
   `;
 }
 
-function buildOwnerCancellationHtml(details: BookingNotificationDetails): string {
-  const siteUrl = getSiteUrl();
+function appointmentDetailsHtml(
+  details: BookingNotificationDetails,
+  { whenLabel, notesLabel }: { whenLabel: string; notesLabel: string }
+): string {
   return `
-    <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
-      <h2 style="color:#c62828">Booking cancelled</h2>
-      <p><strong>${details.clientName}</strong> cancelled their appointment on NailsByGabs.</p>
-      <p><strong>Was scheduled for:</strong> ${details.timeRange}</p>
-      <p><strong>Location:</strong> ${details.locationLabel}</p>
+      <p><strong>${whenLabel}:</strong> ${escapeHtml(details.timeRange)}</p>
+      <p><strong>Location:</strong> ${escapeHtml(details.locationLabel)}</p>
       ${
         details.notes
-          ? `<p><strong>Client notes:</strong> ${details.notes}</p>`
+          ? `<p><strong>${notesLabel}:</strong> ${escapeHtml(details.notes)}</p>`
           : ""
-      }
-      <p style="margin-top:24px">
-        <a href="${siteUrl}/book" style="background:#c62828;color:#fff8fa;padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid #c9a227">
-          View calendar
-        </a>
-      </p>
-    </div>
-  `;
+      }`;
+}
+
+function buildOwnerEmailHtml(
+  details: BookingNotificationDetails,
+  palette: EmailPalette
+): string {
+  return buildEmailHtml(palette, {
+    heading: "New appointment booked",
+    body: `
+      <p><strong>${escapeHtml(details.clientName)}</strong> just reserved a slot on NailsByGabs.</p>
+      ${appointmentDetailsHtml(details, { whenLabel: "When", notesLabel: "Client notes" })}`,
+    ctaLabel: "View calendar",
+  });
+}
+
+function buildOwnerCancellationHtml(
+  details: BookingNotificationDetails,
+  palette: EmailPalette
+): string {
+  return buildEmailHtml(palette, {
+    heading: "Booking cancelled",
+    body: `
+      <p><strong>${escapeHtml(details.clientName)}</strong> cancelled their appointment on NailsByGabs.</p>
+      ${appointmentDetailsHtml(details, { whenLabel: "Was scheduled for", notesLabel: "Client notes" })}`,
+    ctaLabel: "View calendar",
+  });
 }
 
 function clientGreetingName(fullName: string): string {
@@ -115,59 +157,106 @@ function clientGreetingName(fullName: string): string {
 }
 
 function buildClientConfirmationHtml(
-  details: BookingNotificationDetails
+  details: BookingNotificationDetails,
+  palette: EmailPalette
 ): string {
-  const siteUrl = getSiteUrl();
-  const greeting = clientGreetingName(details.bookerFullName);
-  return `
-    <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
-      <h2 style="color:#c62828">You&apos;re booked!</h2>
+  const greeting = escapeHtml(clientGreetingName(details.bookerFullName));
+  return buildEmailHtml(palette, {
+    heading: "You&apos;re booked!",
+    body: `
       <p>Hi ${greeting},</p>
       <p>Your appointment at <strong>NailsByGabs</strong> is confirmed.</p>
-      <p><strong>When:</strong> ${details.timeRange}</p>
-      <p><strong>Location:</strong> ${details.locationLabel}</p>
-      ${
-        details.notes
-          ? `<p><strong>Your notes:</strong> ${details.notes}</p>`
-          : ""
-      }
-      <p style="margin-top:24px">
-        <a href="${siteUrl}/book" style="background:#c62828;color:#fff8fa;padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid #c9a227">
-          View or manage booking
-        </a>
-      </p>
-      <p style="margin-top:24px;font-size:14px;color:#6b4a55">
-        Need to change plans? Sign in on the site and cancel from your booking on the calendar.
-      </p>
-    </div>
-  `;
+      ${appointmentDetailsHtml(details, { whenLabel: "When", notesLabel: "Your notes" })}`,
+    ctaLabel: "View or manage booking",
+    footer:
+      "Need to change plans? Sign in on the site and cancel from your booking on the calendar.",
+  });
 }
 
-function buildClientReminderHtml(details: BookingNotificationDetails): string {
-  const siteUrl = getSiteUrl();
-  const greeting = clientGreetingName(details.bookerFullName);
-  return `
-    <div style="font-family:Georgia,serif;color:#3d1f2a;max-width:480px">
-      <h2 style="color:#c62828">Appointment reminder</h2>
+function buildClientReminderHtml(
+  details: BookingNotificationDetails,
+  palette: EmailPalette
+): string {
+  const greeting = escapeHtml(clientGreetingName(details.bookerFullName));
+  return buildEmailHtml(palette, {
+    heading: "Appointment reminder",
+    body: `
       <p>Hi ${greeting},</p>
       <p>This is a friendly reminder that your <strong>NailsByGabs</strong> appointment is coming up in about 48 hours.</p>
-      <p><strong>When:</strong> ${details.timeRange}</p>
-      <p><strong>Location:</strong> ${details.locationLabel}</p>
-      ${
-        details.notes
-          ? `<p><strong>Your notes:</strong> ${details.notes}</p>`
-          : ""
-      }
-      <p style="margin-top:24px">
-        <a href="${siteUrl}/book" style="background:#c62828;color:#fff8fa;padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid #c9a227">
-          View or manage booking
-        </a>
-      </p>
-      <p style="margin-top:24px;font-size:14px;color:#6b4a55">
-        Need to reschedule? Sign in on the site and cancel from your booking on the calendar.
-      </p>
-    </div>
-  `;
+      ${appointmentDetailsHtml(details, { whenLabel: "When", notesLabel: "Your notes" })}`,
+    ctaLabel: "View or manage booking",
+    footer:
+      "Need to reschedule? Sign in on the site and cancel from your booking on the calendar.",
+  });
+}
+
+/** Gabs's optional note, escaped, with line breaks kept. */
+function ownerMessageHtml(message: string | null, palette: EmailPalette): string {
+  if (!message) return "";
+  return `
+      <p style="margin-bottom:4px"><strong>Message from Gabs:</strong></p>
+      <p style="margin-top:0;padding:12px 16px;border-left:3px solid ${palette.accent};font-style:italic">${escapeHtml(message).replace(/\r?\n/g, "<br>")}</p>`;
+}
+
+function buildClientCancellationHtml(
+  details: BookingNotificationDetails,
+  palette: EmailPalette
+): string {
+  const greeting = escapeHtml(clientGreetingName(details.bookerFullName));
+  return buildEmailHtml(palette, {
+    heading: "Appointment cancelled",
+    body: `
+      <p>Hi ${greeting},</p>
+      <p>Your <strong>NailsByGabs</strong> appointment has been cancelled, as you requested.</p>
+      ${appointmentDetailsHtml({ ...details, notes: null }, { whenLabel: "Was scheduled for", notesLabel: "" })}`,
+    ctaLabel: "Book a new time",
+    footer: "Changed your mind? Open times are always on the booking page.",
+  });
+}
+
+function buildClientDroppedHtml(
+  details: BookingNotificationDetails,
+  message: string | null,
+  palette: EmailPalette
+): string {
+  const greeting = escapeHtml(clientGreetingName(details.bookerFullName));
+  return buildEmailHtml(palette, {
+    heading: "Gabs dropped your appointment",
+    body: `
+      <p>Hi ${greeting},</p>
+      <p>Gabs had to cancel your <strong>NailsByGabs</strong> appointment. Sorry for the change of plans!</p>
+      ${appointmentDetailsHtml({ ...details, notes: null }, { whenLabel: "Was scheduled for", notesLabel: "" })}
+      ${ownerMessageHtml(message, palette)}`,
+    ctaLabel: "Book a new time",
+    footer: "Pick another open time on the booking page whenever you're ready.",
+  });
+}
+
+function buildClientUpdatedHtml(
+  before: BookingNotificationDetails,
+  after: BookingNotificationDetails,
+  message: string | null,
+  palette: EmailPalette
+): string {
+  const greeting = escapeHtml(clientGreetingName(before.bookerFullName));
+  const previous = [
+    before.timeRange !== after.timeRange ? escapeHtml(before.timeRange) : null,
+    before.locationLabel !== after.locationLabel ? escapeHtml(before.locationLabel) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return buildEmailHtml(palette, {
+    heading: "Gabs updated your appointment",
+    body: `
+      <p>Hi ${greeting},</p>
+      <p>Gabs made a change to your <strong>NailsByGabs</strong> appointment. Here are the new details:</p>
+      ${appointmentDetailsHtml(after, { whenLabel: "When", notesLabel: "Your notes" })}
+      <p style="color:${palette.muted};font-size:14px"><s>Previously: ${previous}</s></p>
+      ${ownerMessageHtml(message, palette)}`,
+    ctaLabel: "View your booking",
+    footer:
+      "Can't make the new time? Sign in on the site and cancel from your booking on the calendar.",
+  });
 }
 
 function isValidRecipientEmail(email: string | undefined | null): email is string {
@@ -200,11 +289,54 @@ function getResendFromAddress(): string {
   return sanitized;
 }
 
+/**
+ * Local development only: deliver to the Mailpit inbox that `supabase start`
+ * runs (web UI on :54324) through its send API, instead of Resend.
+ */
+async function sendViaMailpit(
+  baseUrl: string,
+  to: string,
+  subject: string,
+  html: string
+): Promise<boolean> {
+  const from = getResendFromAddress();
+  const match = /^(.*)<([^>]+)>\s*$/.exec(from);
+  const sender = match
+    ? { Name: match[1].trim(), Email: match[2].trim() }
+    : { Name: "", Email: from };
+
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      From: sender,
+      To: [{ Email: to }],
+      Subject: subject,
+      HTML: html,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.error("[notifications] Mailpit send failed:", response.status, body);
+  }
+
+  return response.ok;
+}
+
 async function sendEmail(
   to: string,
   subject: string,
   html: string
 ): Promise<boolean> {
+  const mailpitUrl =
+    process.env.NODE_ENV !== "production"
+      ? process.env.DEV_MAILPIT_URL?.trim()
+      : undefined;
+  if (mailpitUrl) {
+    return sendViaMailpit(mailpitUrl, to, subject, html);
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("[notifications] RESEND_API_KEY is not set");
@@ -246,9 +378,10 @@ async function sendEmail(
 /** Email Gabs when a client books. Free via Resend (3,000 emails/mo). Never throws. */
 export async function notifyOwnerOfBooking(slotId: string): Promise<void> {
   try {
-    const [details, email] = await Promise.all([
+    const [details, email, palette] = await Promise.all([
       getBookingDetails(slotId),
       getOwnerNotificationEmail(),
+      getEmailPalette(),
     ]);
 
     if (!details || !email) {
@@ -261,7 +394,7 @@ export async function notifyOwnerOfBooking(slotId: string): Promise<void> {
     await sendEmail(
       email,
       `New booking: ${details.clientName}`,
-      buildOwnerEmailHtml(details)
+      buildOwnerEmailHtml(details, palette)
     );
   } catch {
     // Booking should succeed even if email fails
@@ -281,7 +414,10 @@ export async function notifyClientOfBooking(
       return;
     }
 
-    const details = await getBookingDetails(slotId);
+    const [details, palette] = await Promise.all([
+      getBookingDetails(slotId),
+      getEmailPalette(),
+    ]);
     if (!details) {
       console.error(
         "[notifications] Skipped client confirmation: missing booking details"
@@ -292,7 +428,7 @@ export async function notifyClientOfBooking(
     await sendEmail(
       clientEmail,
       `Appointment confirmed — ${details.timeRange}`,
-      buildClientConfirmationHtml(details)
+      buildClientConfirmationHtml(details, palette)
     );
   } catch {
     // Booking should succeed even if email fails
@@ -315,7 +451,7 @@ export async function notifyClientOfAppointmentReminder(
     return sendEmail(
       clientEmail,
       `Reminder: appointment in 2 days — ${details.timeRange}`,
-      buildClientReminderHtml(details)
+      buildClientReminderHtml(details, await getEmailPalette())
     );
   } catch {
     return false;
@@ -334,7 +470,10 @@ export async function notifyOwnerOfCancellation(
       return;
     }
 
-    const email = await getOwnerNotificationEmail();
+    const [email, palette] = await Promise.all([
+      getOwnerNotificationEmail(),
+      getEmailPalette(),
+    ]);
     if (!email) {
       console.error(
         "[notifications] Skipped cancellation alert: missing owner email"
@@ -345,10 +484,133 @@ export async function notifyOwnerOfCancellation(
     await sendEmail(
       email,
       `Booking cancelled: ${details.clientName}`,
-      buildOwnerCancellationHtml(details)
+      buildOwnerCancellationHtml(details, palette)
     );
   } catch {
     // Cancellation should succeed even if email fails
+  }
+}
+
+/** Upcoming platform booking plus the client's email, read before Gabs changes it. */
+export type ClientBookingSnapshot = {
+  email: string;
+  startAt: string;
+  endAt: string;
+  location: string | null;
+  details: BookingNotificationDetails;
+};
+
+/**
+ * Snapshot of a client's booking for emails that Gabs's actions trigger.
+ * Null for manual bookings (no client account), appointments that have
+ * already ended, or when the client's email can't be read. Uses the service
+ * role because the client's email lives in auth.users. Never throws.
+ */
+export async function readUpcomingClientBooking(
+  slotId: string
+): Promise<ClientBookingSnapshot | null> {
+  try {
+    const admin = createServiceRoleClient();
+    if (!admin) {
+      console.error("[notifications] Client email skipped: SUPABASE_SERVICE_ROLE_KEY is not configured");
+      return null;
+    }
+
+    const { data } = await admin
+      .from("appointment_slots")
+      .select("start_at, end_at, location, notes, status, booked_by, booker:profiles!booked_by ( full_name )")
+      .eq("id", slotId)
+      .maybeSingle();
+
+    if (!data?.booked_by || data.status !== "booked") return null;
+    if (new Date(data.end_at).getTime() <= Date.now()) return null;
+
+    const { data: authUser } = await admin.auth.admin.getUserById(data.booked_by);
+    const email = authUser?.user?.email;
+    if (!isValidRecipientEmail(email)) return null;
+
+    const bookerRaw = data.booker as { full_name: string } | { full_name: string }[] | null;
+    const booker = Array.isArray(bookerRaw) ? bookerRaw[0] : bookerRaw;
+    const bookerFullName = booker?.full_name?.trim() || "Client";
+
+    return {
+      email,
+      startAt: data.start_at,
+      endAt: data.end_at,
+      location: data.location,
+      details: {
+        clientName: formatOwnerSlotLabel(bookerFullName),
+        bookerFullName,
+        timeRange: formatSlotRange(data.start_at, data.end_at),
+        locationLabel: getLocationShortLabel(normalizeAppointmentLocation(data.location)),
+        notes: data.notes,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Confirmation to a client who cancelled their own booking. Never throws. */
+export async function notifyClientOfCancellation(
+  details: BookingNotificationDetails | null,
+  clientEmail: string | undefined
+): Promise<void> {
+  try {
+    if (!details || !isValidRecipientEmail(clientEmail)) {
+      console.error("[notifications] Skipped client cancellation: missing details or email");
+      return;
+    }
+    await sendEmail(
+      clientEmail,
+      `Your appointment is cancelled — ${details.timeRange}`,
+      buildClientCancellationHtml(details, await getEmailPalette())
+    );
+  } catch {
+    // Cancellation should succeed even if email fails
+  }
+}
+
+/** "Gabs dropped your appointment" after a release or delete. Never throws. */
+export async function notifyClientOfDroppedAppointment(
+  snapshot: ClientBookingSnapshot | null,
+  message: string | null
+): Promise<void> {
+  try {
+    if (!snapshot) return;
+    await sendEmail(
+      snapshot.email,
+      "Gabs dropped your appointment",
+      buildClientDroppedHtml(snapshot.details, message, await getEmailPalette())
+    );
+  } catch {
+    // The release/delete should succeed even if email fails
+  }
+}
+
+/**
+ * "Gabs updated your appointment" when the time or location changed.
+ * `before` is the snapshot taken before saving. Never throws.
+ */
+export async function notifyClientOfUpdatedAppointment(
+  before: ClientBookingSnapshot | null,
+  after: { startAt: string; endAt: string; location: string },
+  message: string | null
+): Promise<void> {
+  try {
+    if (!before) return;
+    const afterDetails: BookingNotificationDetails = {
+      ...before.details,
+      timeRange: formatSlotRange(after.startAt, after.endAt),
+      locationLabel: getLocationShortLabel(normalizeAppointmentLocation(after.location)),
+    };
+    await sendEmail(
+      before.email,
+      "Gabs updated your appointment",
+      buildClientUpdatedHtml(before.details, afterDetails, message, await getEmailPalette())
+    );
+  } catch {
+    // The edit should succeed even if email fails
   }
 }
 

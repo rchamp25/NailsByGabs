@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { Cormorant_Garamond, Creepster, DM_Sans } from "next/font/google";
 
-import { AppSidebar } from "@/components/app-sidebar";
+import { DesktopNav } from "@/components/desktop-nav";
+import { HalloweenFog, HalloweenPumpkins } from "@/components/effects/halloween";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PageMotion } from "@/components/page-motion";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getSessionProfile } from "@/lib/auth";
 import { getActiveThemeId } from "@/lib/theme";
 import {
@@ -27,6 +27,15 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+// Halloween titles only (.seasonal-title). Not preloaded: browsers download it
+// only when an element actually uses it, i.e. while the halloween theme is on.
+const creepster = Creepster({
+  variable: "--font-creepster",
+  subsets: ["latin"],
+  weight: "400",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -57,24 +66,27 @@ export default async function RootLayout({
     getSessionProfile(),
     getActiveThemeId(),
   ]);
+  const isHalloween = activeThemeId === "halloween";
 
   return (
     <html lang="en" data-theme={activeThemeId}>
       <body
-        className={`${dmSans.variable} ${cormorant.variable} app-body antialiased`}
+        className={`${dmSans.variable} ${cormorant.variable} ${creepster.variable} app-body antialiased`}
       >
-        <SidebarProvider
-          defaultOpen={false}
-          className="!min-h-0 min-h-0 w-full flex-1 md:!min-h-svh md:h-auto"
-        >
-          <AppSidebar profile={profile} email={user?.email} />
-          <SidebarInset className="mobile-ambient-bg flex min-h-0 flex-1 flex-col overflow-hidden md:overflow-visible">
+        {/* Mobile: a fixed-height column where only .app-scroll-region
+            scrolls, so the bottom nav stays pinned (incl. Instagram's
+            in-app browser). Desktop: normal window scrolling. */}
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden md:h-auto md:min-h-svh md:overflow-visible">
+          <main className="mobile-ambient-bg bg-background relative flex min-h-0 w-full flex-1 flex-col overflow-hidden md:overflow-visible">
+            <DesktopNav isOwner={profile?.role === "owner"} isSignedIn={!!user} />
+            {isHalloween && <HalloweenPumpkins />}
             <div className="app-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain md:overflow-visible">
               <PageMotion>{children}</PageMotion>
             </div>
+            {isHalloween && <HalloweenFog />}
             <MobileBottomNav isOwner={profile?.role === "owner"} />
-          </SidebarInset>
-        </SidebarProvider>
+          </main>
+        </div>
       </body>
     </html>
   );

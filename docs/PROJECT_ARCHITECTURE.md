@@ -62,6 +62,8 @@ Understanding the build order matters because later features were layered onto l
 | **7 — Business intelligence** | Analytics dashboard, event log, backfill, timeframe filters, chart iterations | Owner wanted visibility into bookings/completions/revenue |
 | **8 — UX refinement** | Hover-only desktop sidebar, analytics hover tooltips, chart copy cleanup | Portfolio-first layout vs navigation discoverability |
 | **9 — Client retention** | 48-hour email reminders via daily cron | Chosen as highest-impact next feature without payments |
+| **10 — Security hardening** | Migration 013 (clients read only their own data), owner phone moved to env var, all `.env*` files git-ignored | Review found clients could read every profile, booking name/note, and the owner email through the Supabase API |
+| **11 — Overhaul prep** | `AGENTS.md` shared change log, `CLAUDE.md`, dark-mode variant removed, header shadow made theme-aware | Start of a large visual and content overhaul with multiple agents |
 
 Each phase added complexity only where the owner confirmed it was needed—Square was removed rather than extended; analytics was backfilled rather than starting from zero; reminders were email-only rather than SMS.
 
@@ -170,7 +172,7 @@ This section documents decisions made explicitly through development prompts—n
 
 | Feature | Route | Description |
 |---------|-------|-------------|
-| Portfolio | `/` | Tag-filtered nail art gallery with hero, carousel, lightbox |
+| Portfolio | `/` | Tag-filtered nail art gallery: short intro + Book button (no hero), featured carousel, masonry grid, lightbox |
 | Services & Pricing | `/services` | DB-backed GelX menu; owner edits prices/notes |
 | About | `/about` | Bio, contact, social links |
 | Book Appointment | `/book` | Auth-gated calendar |
@@ -181,7 +183,8 @@ This section documents decisions made explicitly through development prompts—n
 |---------|-------|-------------|
 | Analytics | `/analytics` | KPIs, revenue estimates, splits, trend charts |
 | Clients | `/clients` | Registered clients, verification status, auth helpers |
-| Appearance | `/settings` | Live theme switching (cherry-studio, pearl, flower) |
+| Appearance | `/settings` | Live theme switching (cherry-studio, pearl, flower, seasonal halloween with scheduled switch-back) |
+| Photos | `/photos` | Review/confirm gallery tags, edit titles, pick carousel photos, reorder (migration 015) |
 | Calendar admin | `/book` | Slot CRUD, Google Calendar connect, manual bookings |
 
 ### Explicit non-goals (confirmed, not deferred by accident)
@@ -269,14 +272,26 @@ flowchart TB
 
 ```
 NailsByGabs/
-├── docs/                          # This document
-├── public/portfolio/                # Nail art images (code-registered list)
+├── AGENTS.md                        # Shared agent change log + orientation (read first)
+├── CLAUDE.md                        # Points Claude Code sessions at AGENTS.md
+├── .github/workflows/ci.yml         # Lint, typecheck, build, audit on push/PR
+├── scripts/optimize-images.mjs      # Photo resize/WebP/metadata-strip pipeline
+├── docs/                            # This document
+├── public/
+│   ├── portfolio/                   # Gallery WebP images (code-registered list in src/lib/portfolio.ts)
+│   ├── effects/                     # Seasonal theme assets (pumpkins.svg)
+│   ├── about/                       # Headshot
+│   └── branding/                    # Logo / favicon
 ├── src/
 │   ├── app/                         # Routes, layouts, actions, API
-│   ├── components/                  # ui/, booking/, analytics/, effects/
+│   ├── components/                  # ui/, booking/, analytics/, effects/, portfolio/, …
 │   ├── lib/                         # Domain logic, Supabase clients
+│   ├── middleware.ts                # Supabase session refresh only (no route guards)
 │   └── types/
-├── supabase/migrations/             # 001–012 SQL (manual apply)
+├── supabase/
+│   ├── migrations/                  # 001–014 SQL (manual apply in production)
+│   ├── config.toml                  # Local Supabase (CLI) settings
+│   └── email-templates/             # Supabase auth email HTML (pasted into dashboard)
 ├── vercel.json                      # Daily cron
 └── .env.example
 ```
@@ -293,14 +308,29 @@ NailsByGabs/
 
 | Viewport | Navigation |
 |----------|------------|
-| Desktop | Collapsed-by-default sidebar; **hover tab** at top-left opens panel; **no** header toggle, **no** click-to-pin |
+| Desktop | One **top bar pinned while scrolling** (`components/desktop-nav.tsx`, rendered in the root layout): NailsByGabs name, labeled page tabs (active = pill), divider + owner tabs, social icons, Sign in/out. No sidebar |
 | Mobile | Pill bottom nav with sliding indicator; sidebar hidden |
 
 The desktop pattern went through **three iterations** in one conversation arc: clickable peek tab → full-height hover strip → top chevron tab with bump-out. The final version balances portfolio content space against discoverability.
 
 ### Theming
 
-Three owner-selectable themes in `/settings`, stored in `app_config.active_theme`, applied via CSS variables in `globals.css`. Location-specific slot colors on the booking calendar inherit theme tokens.
+Owner-selectable themes in `/settings`, stored in `app_config.active_theme`, applied via CSS variables in `globals.css`. Location-specific slot colors on the booking calendar inherit theme tokens.
+
+**Seasonal themes (migration 014).** `halloween` is a dark seasonal theme with:
+- a faint jack-o'-lantern pattern (`public/effects/pumpkins.svg`) drifting diagonally behind all content, plus drifting fog in front (bats were removed 2026-10-27)
+- the Creepster font on page titles (no glow) and a softened orange (`#ef8a45`) with the slime-green accent kept vivid
+
+Selecting a seasonal theme opens a popup to schedule an automatic switch back. The default is the next Nov 1 at 12:00 AM Eastern, and the switch-back theme is the owner's current everyday theme.
+
+How it works:
+- **Writing:** `set_site_theme(p_theme, p_revert_at, p_revert_to)` (security definer, owner-only) validates and stores the theme and the `theme_revert_at` / `theme_revert_to` keys atomically.
+- **Switching back:** there is no cron. `getThemeState()` notices a due switch-back while rendering and calls `apply_due_theme_revert()`, which is safe for anonymous callers because it only acts once the time has passed. The switch therefore happens on the first page view after the scheduled time.
+
+- **Theme ids:** `cherry-studio` (default), `pearl`, and `flower` are defined in `src/lib/themes.ts`. Each one has a `[data-theme="…"]` token block in `globals.css`, and those tokens are mapped into Tailwind through `@theme inline`.
+- **Visitor read path:** the public reads only the `active_theme` key, via the "Anyone can read active theme" RLS policy. All other `app_config` keys are owner-only since migration 013.
+- **No dark mode.** The site has only the owner-selected light themes. The unused Tailwind `dark` custom variant and the few `dark:` classes were removed on 2026-10-24.
+- **Every color comes from theme tokens; nothing is hardcoded.** For example, the mobile header shadow (`.site-header-shadow`) is derived from `--accent`.
 
 ### Analytics chart UI (owner-specified behavior)
 
@@ -327,13 +357,31 @@ Chart engineering lives in `analytics-trend-chart.tsx` and `analytics-trend.ts`.
 
 Signup trigger compares email to `app_config.owner_email` → assigns `owner` or `client` role once. Role is immutable via RLS.
 
+### Read model (since migration 013)
+
+| Table / function | Client (authenticated) can read | Owner can read |
+|------------------|----------------------------------|----------------|
+| `profiles` | Own row only | All rows (via `is_owner()`) |
+| `appointment_slots` | Open slots + own bookings | All rows |
+| `get_taken_slots()` RPC | Other clients' upcoming bookings as **id, times, location only** (no name/notes) | — |
+| `app_config` | `active_theme`, `theme_revert_at`, `theme_revert_to` only (public policy, migration 014) | All keys |
+| `portfolio_photos` | All rows (public gallery metadata) | All rows; insert/update/delete (migration 015) |
+| `booking_events` | Nothing | All rows |
+
+`is_owner()` is a security definer helper so the `profiles` policy can check the caller's role without recursing into itself. Internal functions (`log_booking_event`, `mark_completed_appointments`, `analytics_tracking_started_at`) are no longer executable through the API. `mark_completed_appointments` is granted only to `service_role`.
+
 ### Email verification flow
 
 After signup, users see a message to check email and verify before signing in. Auth emails go through Brevo SMTP configured in Supabase—not Resend.
 
 ### Authorization style
 
-No middleware route guards. Each owner page and Server Action checks `profile.role === "owner"` and redirects or errors explicitly.
+There are no middleware route guards. Every owner-only entry point calls a helper from `src/lib/auth.ts`:
+
+- `requireOwner(redirectTo = "/")` in owner pages and route handlers. It redirects non-owners.
+- `getOwnerSession()` in Server Actions. It returns `null` for non-owners, so the action can return its own error message.
+
+`getSessionProfile()` is wrapped in React `cache()`, so the layout, header, page, and helpers share one Supabase auth lookup per request.
 
 ---
 
@@ -350,8 +398,11 @@ Key columns: `start_at`, `end_at`, `status`, `booked_by`, `booked_name`, `locati
 | `book_appointment_slot` | Client books open slot; logs analytics; resets reminder flag |
 | `cancel_my_booking` | Client cancels; logs event; clears slot |
 | `release_appointment_slot` | Owner releases booking |
+| `get_taken_slots` | Read-only: other clients' upcoming bookings as times only (migration 013) |
 
 Clients never UPDATE slots directly—RPCs enforce atomicity and race safety.
+
+**Client calendar data path:** `/book` merges the client's RLS-visible slots (open slots and their own bookings) with `get_taken_slots()` rows rendered as "Taken". Before migration 013, the page sent every booking's name and notes to the browser.
 
 ### Post-booking side effects (never block the booking)
 
@@ -369,7 +420,7 @@ Owner OAuth stores refresh token. Every slot mutation syncs create/update/delete
 
 ## 11. Database Design & Evolution
 
-Migrations **001–012** are applied manually in Supabase SQL Editor—no CI migration runner.
+Migrations **001–015** are applied manually in Supabase SQL Editor—no CI migration runner. Locally, `npx supabase start` / `npx supabase migration up` apply them automatically.
 
 | # | Owner-relevant change |
 |---|----------------------|
@@ -380,6 +431,9 @@ Migrations **001–012** are applied manually in Supabase SQL Editor—no CI mig
 | 010 | **Keep history forever** (removed purge) |
 | 011 | **Backfill** analytics from existing slots |
 | 012 | 48h reminder tracking |
+| 013 | **Restrict client reads**: own profile/bookings only, `get_taken_slots()`, owner-only `app_config`, revoke internal RPCs |
+| 014 | **Seasonal themes**: `halloween` allowed, `is_site_theme()`, `set_site_theme()`, `apply_due_theme_revert()`, public read of the revert schedule |
+| 015 | **Portfolio photos**: owner-editable gallery metadata (tags, title, featured, sort order, needs_review); rows only for edited photos |
 
 ### Analytics event types
 
@@ -431,9 +485,25 @@ Keeping booking emails on Resend means Gabs doesn't get owner notifications from
 | Owner: new booking | After client books |
 | Client: confirmation | After client books |
 | Owner: cancellation | After client cancels |
-| Client: 48h reminder | Daily cron |
+| Client: "Your appointment is cancelled" | After client cancels |
+| Client: "Gabs dropped your appointment" | Owner releases or deletes an upcoming platform booking (optional note from Gabs) |
+| Client: "Gabs updated your appointment" | Owner changes the **time or location** of an upcoming platform booking (optional note; shows the previous details). Changing only Gabs's calendar label sends nothing |
+| Client: 48h reminder | Daily cron. Reset when the owner changes the time, so the new time gets its own reminder |
 
 All Resend calls are wrapped in try/catch and **never throw**.
+
+**Rules for emails Gabs's actions trigger:**
+- Manual bookings (no `booked_by`) and appointments that have already ended never email anyone.
+- The client's email comes from `auth.users` via the service role (`readUpcomingClientBooking()`). It is read *before* the release, delete, or edit, because those clear or change the row.
+- On `/book`, Release and Delete on such a booking open a confirm popup with an optional "Message to client" (max 500 characters). The edit dialog shows the same optional field.
+
+### Email styling
+
+All four Resend emails share one layout, `buildEmailHtml` in `notifications.ts`, colored from the **active site theme**.
+
+- **Colors:** each `THEME_CATALOG` entry in `themes.ts` has an `email` palette of hex values that mirror the `globals.css` tokens, because email clients cannot read CSS variables. Any change to theme colors must update both places.
+- **Escaping:** every interpolated value is HTML-escaped (`escapeHtml`). Client names and notes are user input.
+- **Auth emails are separate:** the Supabase auth emails (`supabase/email-templates/`) are static HTML pasted into the Supabase dashboard and do not follow the active theme.
 
 ### Cron (Vercel Hobby constraint)
 
@@ -472,12 +542,32 @@ Custom domain required updating `NEXT_PUBLIC_SITE_URL`, Supabase redirect URLs, 
 
 ## 15. Security Model
 
-- RLS on all tables
-- Security definer RPCs for booking
-- `server-only` on privileged modules
-- Cron Bearer secret
-- Google OAuth `state` must match user ID
-- Service role never exposed to browser
+### Controls in place
+
+- RLS on all tables. Since migration 013, clients read only their own profile and bookings (see [Section 9](#9-authentication--authorization)).
+- Security definer RPCs for booking, with internal functions revoked from API roles.
+- `server-only` on privileged modules (`lib/supabase/admin.ts`, `lib/auth.ts`, `lib/clients.ts`, …).
+- Every owner page and Server Action checks `profile.role === "owner"` itself; middleware does not guard routes.
+- Cron endpoint requires `Authorization: Bearer <CRON_SECRET>`.
+- Google OAuth callback requires an owner session, and `state` must equal the owner's user ID.
+- The service role key is never exposed to the browser.
+- No personal contact data in source: the owner phone comes from `NEXT_PUBLIC_OWNER_PHONE`, and all `.env*` files are git-ignored.
+
+### Open security gaps (review of 2026-10-24)
+
+The review found these gaps; they are **not yet fixed**. Track fixes in `AGENTS.md`.
+
+| # | Severity | Issue | Recommended fix |
+|---|----------|-------|-----------------|
+| S1 | **Critical** | `npm audit` reports 5 advisories (1 critical, 4 high): `next` 15.5.19 (Server Actions DoS, cache confusion), `sharp` (libvips/libheif), `postcss`, `nanoid`, `source-map-js` | `npm audit fix`. All fixes stay within current majors (e.g. `next` 15.5.28) |
+| S2 | High → **partly fixed** | **HTML injection in booking emails.** Escaping was added on 2026-10-24 (`escapeHtml` in `notifications.ts`). Still open: `notes` and `full_name` have no length limit | Cap lengths in the `book_appointment_slot` RPC / signup trigger and in the Server Actions |
+| S3 | Medium | **No security headers.** `next.config.ts` sets no CSP, HSTS, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, or `Permissions-Policy` | Add `headers()` in `next.config.ts` |
+| S4 | Medium | **Google OAuth `state` is the owner's user ID**, which is predictable rather than a per-request nonce. A login-CSRF could link an attacker's Google account and sync client names to it | Random nonce stored in an httpOnly cookie and compared on callback |
+| S5 | Medium | **Weak auth policy and no bot protection.** Minimum password length is 6; signup, login, and reset have no CAPTCHA | Raise to 8+ in Supabase and `updatePassword`, enable leaked-password protection, add Cloudflare Turnstile through Supabase Auth CAPTCHA |
+| S6 | Low | **Owner client actions trust form input.** `sendClientPasswordReset` and `sendClientVerificationEmail` take the email from the form instead of looking it up by `clientId` | Resolve the email server-side through `auth.admin.getUserById` |
+| S7 | Low | **Raw error messages reach the UI.** Server Actions return Supabase `error.message` directly to the client | Map to friendly messages and log details server-side |
+| S8 | Low | **Non-constant-time cron secret comparison** | Use `crypto.timingSafeEqual` |
+| S9 | Low | **Google refresh token stored in plaintext** in `owner_integrations` (RLS owner-only) | Supabase Vault or app-level encryption |
 
 ---
 
@@ -485,7 +575,7 @@ Custom domain required updating `NEXT_PUBLIC_SITE_URL`, Supabase redirect URLs, 
 
 ### Operational checklist
 
-1. Apply migrations 001–012 in Supabase SQL Editor (009 then 011 back-to-back before live traffic if analytics is new)
+1. Apply migrations 001–015 in Supabase SQL Editor (014 before selecting Halloween; 015 before editing on /photos. Without them the site falls back safely) (009 then 011 back-to-back before live traffic if analytics is new). After 013, check the `pg_policies` query at the end of that file: any leftover `using (true)` read policy created in the dashboard undoes the restriction
 2. Set real `owner_email` in `app_config`
 3. Configure Vercel env vars (see `.env.example`)
 4. Connect Google Calendar from owner account on `/book`
@@ -493,7 +583,20 @@ Custom domain required updating `NEXT_PUBLIC_SITE_URL`, Supabase redirect URLs, 
 
 ### Environment variables (critical)
 
-`NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `RESEND_*`, `GOOGLE_*`, `NEXT_PUBLIC_SITE_URL`
+`NEXT_PUBLIC_SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `RESEND_*`, `GOOGLE_*`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_OWNER_PHONE` (optional; About page hides the phone link when unset)
+
+### Verification
+
+There is no automated test suite. Verify changes with `npm run lint` (ESLint CLI, `eslint.config.mjs`), `npm run typecheck`, and `npm run build`, then check manually in `npm run dev`:
+
+- **Roles:** signed out, client, owner
+- **Themes:** all three
+- **Widths:** mobile and desktop
+- **Browsers:** ideally Instagram's in-app browser, which is where most visitors arrive
+
+`npm run build` requires `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Placeholder values are enough, because every page renders per request.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, a placeholder-env build, and `npm audit` on pushes to `main` and on PRs. The audit step is non-blocking until S1 is fixed.
 
 ---
 
@@ -537,9 +640,17 @@ This section ties **specific features** to **specific problems** encountered dur
 
 **Root cause:** Portfolio reads from a **code-defined file list** in `portfolio.ts`, not dynamic directory scanning. Untracked or unlisted files don't appear.
 
-**Solution:** Add filenames to `PORTFOLIO_FILE_NAMES` (URL-encoded for spaces). Same issue affects 7 `Gabby Nails-*.JPEG` files currently untracked.
+**Solution:** Add filenames to `PORTFOLIO_FILE_NAMES` (URL-encoded for spaces).
+
+**Current state (2026-10-27):** the registry has two kinds of entries. `LABELED_SETS` has explicit tags, title and crop point per file, for camera names like `IMG_1234` that can't be parsed; the 40 sets added on 2026-10-27 are tagged as drafts pending the owner's review. `PORTFOLIO_FILE_NAMES` holds the older filename-tagged photos. A `Seasonal` filter tab was added for holiday sets. The photoshoot images are not used on the site.
 
 **Lesson:** Static asset galleries need an explicit registry step—upload alone isn't enough.
+
+**Image weight:** resolved on 2026-10-27. All 81 gallery photos are WebP produced by the optimizer: 238 MB of originals became 9.4 MB. Originals live in the git-ignored `image-originals/` folder (`portfolio/`, `about/`, `photoshoot/`, `retired/`, `review/`). The old JPEGs remain in git history.
+
+Pipeline: `npm run images:optimize -- image-originals/portfolio --out public/portfolio` (`scripts/optimize-images.mjs`). It applies EXIF rotation, resizes the long edge to 2000px, writes WebP at quality 80, and strips metadata, including any GPS location.
+
+**Crop points:** each photo has an `object-position` in `focalByFileName`, set to the center of the nail art. Because the image point at Y% aligns with the container point at Y%, the nails stay in frame for square tiles, 4:5 cards, and the 16:10 lightbox alike.
 
 ---
 
@@ -621,7 +732,9 @@ This section ties **specific features** to **specific problems** encountered dur
 |---------|----------|----------------|
 | Click peek tab + header toggle | Click to open | Too click-heavy |
 | Full-height hover strip | Edge hover | Too aggressive visually |
-| Top chevron hover tab | Hover below header, bump-out animation | **Shipped** |
+| Top chevron hover tab | Hover below header, bump-out animation | Shipped (2026-08) |
+| Tall labeled "MENU" tab | Hover or click; click-outside/Esc close | Replaced: felt big and overlapped content |
+| **Top tab bar** (no sidebar) | Labeled tabs always visible, pinned on scroll, mirrors the mobile bottom bar | **Shipped (2026-10-27)** |
 
 **Implementation:** Removed `SidebarTrigger` from desktop header; deleted peek tab component; added `sidebar-hover-tab` with `ChevronLeft`; panel opens on mouse enter, closes on leave.
 
@@ -659,6 +772,22 @@ This section ties **specific features** to **specific problems** encountered dur
 **Risk:** Schema drift between local assumptions and production.
 
 **Mitigation:** Numbered migrations, idempotent patterns, full RPC replacements in later migrations (009/012 replace booking functions entirely), runbook in migration headers.
+
+---
+
+### 17.14 Over-broad client read access
+
+**Problem:** The original RLS policies let any signed-in user read every profile, every slot (including other clients' names and notes), and `app_config`, which includes the owner's email. The `/book` page also sent all of that to the browser.
+
+**Solution (migration 013):**
+
+- Owner check moved into the security definer `is_owner()` helper so it can be used safely in policies on `profiles` itself.
+- Clients can read only open slots and their own bookings.
+- The new `get_taken_slots()` RPC returns other bookings as times only, so the calendar can still show "Taken".
+- `app_config` is owner-only, apart from the public `active_theme` key.
+- Internal RPCs are revoked from API roles.
+
+**Lesson:** "Authenticated" is not a trust boundary on a site where anyone can sign up. Policies must be scoped to the row owner.
 
 ---
 
@@ -700,7 +829,23 @@ Discussed in conversation as next steps **without payment**:
 4. SEO (sitemap, robots, JSON-LD)
 5. Client cancellation confirmation email
 6. Owner settings UI for notification email and revenue default
-7. Wire untracked portfolio photos into registry
+7. Wire staged portfolio photos into registry (needs tag-style names)
+8. Close the security gaps in [Section 15](#15-security-model) (S1–S9)
+9. ~~Portfolio image optimization pipeline~~: **done 2026-10-27**
+
+### Architecture follow-ups (2026-10-24 review)
+
+Resolved on 2026-10-24:
+- Session lookups are now deduplicated with React `cache()`.
+- `requireOwner()` and `getOwnerSession()` replace 14 repeated owner checks.
+- Dead Square CSS and the placeholder files in `public/` are removed.
+- Lint moved to the ESLint CLI.
+- GitHub Actions CI is added.
+
+Still open:
+- **Every route is dynamic.** The root layout reads the session, so even the portfolio and services pages render per request. Moving the auth-dependent nav bits to a client island, or using partial prerendering once it is stable, would let the public pages be static and CDN-cached.
+- **Copy is scattered.** Content lives in `lib/data.ts`, `lib/site-metadata.ts`, the hero component, and inline page JSX. Gathering marketing copy into one module would make the content overhaul easier.
+- **Local development database.** There is no local Supabase setup yet. The Supabase CLI and Docker would apply `supabase/migrations/` automatically.
 
 ---
 
@@ -717,7 +862,13 @@ Discussed in conversation as next steps **without payment**:
 | Cron | `vercel.json`, `src/app/api/cron/appointment-lifecycle/route.ts` |
 | Notifications | `src/lib/notifications.ts` |
 | Google sync | `src/lib/google-calendar.ts`, `src/app/api/google/*` |
-| Migrations | `supabase/migrations/001` … `012` |
+| Migrations | `supabase/migrations/001` … `015` |
+| Navigation | `src/lib/nav.ts`, `src/components/desktop-nav.tsx`, `src/components/mobile-bottom-nav.tsx` |
+| Gallery data & editor | `src/lib/portfolio.ts` (defaults), `src/lib/portfolio-photos.ts` (DB merge), `src/app/photos/*`, `src/components/photos/photo-manager.tsx` |
+| Seasonal theme | `src/lib/theme.ts`, `src/app/settings/actions.ts`, `src/components/settings/theme-picker.tsx`, `src/components/effects/halloween.tsx`, migration 014 |
+| RLS read model | `supabase/migrations/013_restrict_client_reads.sql`, `src/app/book/page.tsx` |
+| Theming | `src/app/globals.css`, `src/lib/themes.ts`, `src/lib/theme.ts`, `src/components/settings/theme-picker.tsx` |
+| Agent change log | `AGENTS.md` |
 
 ---
 
@@ -734,7 +885,9 @@ Discussed in conversation as next steps **without payment**:
 | Top chevron hover tab | Final sidebar UX |
 | Analytics hover tooltips | 1m scrub with date + count |
 | 48h reminders | Client email ~2 days before |
+| Owner phone to env var | Phone no longer stored in source |
+| Restrict client reads (013) | Clients see only their own data |
 
 ---
 
-*This document reflects the NailsByGabs codebase through migration 012, incorporating product decisions and engineering challenges from the full development conversation—not only the final implementation state.*
+*This document reflects the NailsByGabs codebase through migration 015 (last updated 2026-10-27), incorporating product decisions and engineering challenges from the full development conversation—not only the final implementation state. Per-change history from that point on lives in `AGENTS.md`.*

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getSessionProfile } from "@/lib/auth";
+import { getOwnerSession, getSessionProfile } from "@/lib/auth";
 import {
   deleteGoogleCalendarEvent,
   syncSlotToGoogleCalendar,
@@ -11,12 +11,24 @@ import { parseBusinessDateTimeLocal } from "@/lib/business-timezone";
 import { isAppointmentLocation } from "@/lib/appointment-locations";
 import {
   notifyClientOfBooking,
+  notifyClientOfCancellation,
+  notifyClientOfDroppedAppointment,
+  notifyClientOfUpdatedAppointment,
   notifyOwnerOfBooking,
   notifyOwnerOfCancellation,
   readBookingNotificationDetails,
+  readUpcomingClientBooking,
 } from "@/lib/notifications";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+
+const CLIENT_MESSAGE_MAX_LENGTH = 500;
+
+/** Gabs's optional note for the client's email; empty means none. */
+function normalizeClientMessage(raw: unknown): string | null {
+  const message = String(raw ?? "").trim().slice(0, CLIENT_MESSAGE_MAX_LENGTH);
+  return message || null;
+}
 
 async function getOwnerProfileId(): Promise<string | null> {
   // Clients cannot read the owner's profile under RLS; Google sync needs the
@@ -40,8 +52,7 @@ async function syncGoogleForSlot(slotId: string) {
 }
 
 export async function createSlot(formData: FormData) {
-  const { profile } = await getSessionProfile();
-  if (!profile || profile.role !== "owner") {
+  if (!(await getOwnerSession())) {
     return { error: "Only the owner can create slots." };
   }
 
@@ -96,8 +107,7 @@ export async function updateSlot(
   _prev: { error?: string; success?: boolean } | null,
   formData: FormData
 ): Promise<{ error?: string; success?: boolean }> {
-  const { profile } = await getSessionProfile();
-  if (!profile || profile.role !== "owner") {
+  if (!(await getOwnerSession())) {
     return { error: "Only the owner can edit slots." };
   }
 
@@ -125,7 +135,7 @@ export async function updateSlot(
   const supabase = await createClient();
   const { data: existing, error: fetchError } = await supabase
     .from("appointment_slots")
-    .select("id, status")
+    .select("id, status, start_at, end_at, location, booked_by")
     .eq("id", slotId)
     .maybeSingle();
 
@@ -140,6 +150,16 @@ export async function updateSlot(
     return { error: "Enter a client name for booked appointments." };
   }
 
+  const timeChanged =
+    new Date(existing.start_at).getTime() !== startAt.getTime() ||
+    new Date(existing.end_at).getTime() !== endAt.getTime();
+  const locationChanged = existing.location !== locationRaw;
+  // Only time/location changes matter to the client; Gabs's calendar label doesn't.
+  const clientSnapshot =
+    existing.status === "booked" && existing.booked_by && (timeChanged || locationChanged)
+      ? await readUpcomingClientBooking(slotId)
+      : null;
+
   const { error } = await supabase
     .from("appointment_slots")
     .update({
@@ -147,6 +167,8 @@ export async function updateSlot(
       end_at: endAt.toISOString(),
       location: locationRaw,
       booked_name: existing.status === "booked" ? bookedName : null,
+      // A new time gets a fresh 48-hour reminder from the daily cron.
+      ...(timeChanged ? { reminder_48h_sent_at: null } : {}),
     })
     .eq("id", slotId);
 
@@ -155,20 +177,29 @@ export async function updateSlot(
   }
 
   await syncGoogleForSlot(slotId);
+  if (clientSnapshot && endAt.getTime() > Date.now()) {
+    await notifyClientOfUpdatedAppointment(
+      clientSnapshot,
+      { startAt: startAt.toISOString(), endAt: endAt.toISOString(), location: locationRaw },
+      normalizeClientMessage(formData.get("clientMessage"))
+    );
+  }
 
   revalidatePath("/book");
   return { success: true };
 }
 
-export async function deleteSlot(slotId: string) {
-  const { profile } = await getSessionProfile();
-  if (!profile || profile.role !== "owner") {
+/** `clientMessage` is Gabs's optional note for the "dropped" email. */
+export async function deleteSlot(slotId: string, clientMessage?: string) {
+  const owner = await getOwnerSession();
+  if (!owner) {
     return { error: "Only the owner can delete slots." };
   }
 
-  if (profile.id) {
-    await deleteGoogleCalendarEvent(slotId, profile.id);
-  }
+  // Read the booking before it disappears; null for open/manual/past slots.
+  const clientSnapshot = await readUpcomingClientBooking(slotId);
+
+  await deleteGoogleCalendarEvent(slotId, owner.profile.id);
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -180,15 +211,23 @@ export async function deleteSlot(slotId: string) {
     return { error: error.message };
   }
 
+  await notifyClientOfDroppedAppointment(
+    clientSnapshot,
+    normalizeClientMessage(clientMessage)
+  );
+
   revalidatePath("/book");
   return { success: true };
 }
 
-export async function releaseSlot(slotId: string) {
-  const { profile } = await getSessionProfile();
-  if (!profile || profile.role !== "owner") {
+/** `clientMessage` is Gabs's optional note for the "dropped" email. */
+export async function releaseSlot(slotId: string, clientMessage?: string) {
+  if (!(await getOwnerSession())) {
     return { error: "Only the owner can release bookings." };
   }
+
+  // Read the booking before the RPC clears booked_by.
+  const clientSnapshot = await readUpcomingClientBooking(slotId);
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("release_appointment_slot", {
@@ -200,6 +239,10 @@ export async function releaseSlot(slotId: string) {
   }
 
   await syncGoogleForSlot(slotId);
+  await notifyClientOfDroppedAppointment(
+    clientSnapshot,
+    normalizeClientMessage(clientMessage)
+  );
 
   revalidatePath("/book");
   return { success: true };
@@ -252,7 +295,10 @@ export async function cancelMyBooking(slotId: string) {
     return { error: error.message };
   }
 
-  await notifyOwnerOfCancellation(details);
+  await Promise.all([
+    notifyOwnerOfCancellation(details),
+    notifyClientOfCancellation(details, user.email),
+  ]);
   await syncGoogleForSlot(slotId);
 
   revalidatePath("/book");

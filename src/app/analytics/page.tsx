@@ -1,10 +1,9 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
 import { AnalyticsTimeframeBar } from "@/components/analytics/analytics-timeframe-bar";
 import { SiteHeader } from "@/components/site-header";
-import { getSessionProfile } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { getAnalyticsSnapshot, parseAnalyticsTimeframe } from "@/lib/analytics";
 
 export default async function AnalyticsPage({
@@ -12,11 +11,7 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ range?: string }>;
 }) {
-  const { profile } = await getSessionProfile();
-
-  if (!profile || profile.role !== "owner") {
-    redirect("/");
-  }
+  await requireOwner();
 
   const { range } = await searchParams;
   const timeframe = parseAnalyticsTimeframe(range);

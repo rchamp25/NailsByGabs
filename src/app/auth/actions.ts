@@ -21,6 +21,8 @@ export async function signUp(
     return { error: getSupabaseConfigError() };
   }
 
+  let signedIn = false;
+
   try {
     const supabase = await createClient();
 
@@ -46,22 +48,25 @@ export async function signUp(
     }
 
     revalidatePath("/", "layout");
-
-    if (data.session) {
-      redirect("/book");
-    }
-
-    return {
-      success: true,
-      message:
-        "Account created! Check your email, click the verification link to confirm your account, then sign in to book.",
-    };
+    signedIn = !!data.session;
   } catch (err) {
     return {
       error:
         err instanceof Error ? err.message : "Something went wrong. Try again.",
     };
   }
+
+  // redirect() throws NEXT_REDIRECT, so it must run outside the try/catch.
+  // A session exists only when email confirmation is disabled (e.g. local Supabase).
+  if (signedIn) {
+    redirect("/book");
+  }
+
+  return {
+    success: true,
+    message:
+      "Account created! Check your email, click the verification link to confirm your account, then sign in to book.",
+  };
 }
 
 export async function signIn(

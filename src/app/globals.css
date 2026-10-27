@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -25,6 +23,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
 
   --font-sans: var(--font-dm-sans);
   --font-serif: var(--font-cormorant);
@@ -56,6 +56,9 @@
   --accent: #c9a227;
   --accent-foreground: #2d1219;
   --destructive: #b91c1c;
+  /* Status text (e.g. "Email verified"); inherited by every light theme */
+  --success: #065f46;
+  --warning: #78350f;
   --border: #ecd5dc;
   --sidebar: #fff5f8;
   --sidebar-foreground: #2d1219;
@@ -70,8 +73,6 @@
   --page-gradient-end: #fff5f8;
   --hero-glow-a: rgb(201 162 39 / 0.22);
   --hero-glow-b: rgb(159 18 57 / 0.14);
-  --silk-a: rgb(252 232 239 / 0.9);
-  --silk-b: rgb(255 248 245 / 0.85);
   --nav-glass: rgb(255 245 248 / 0.92);
   --slot-webster-bg: rgb(252 232 239 / 0.72);
   --slot-webster-border: rgb(201 162 39 / 0.45);
@@ -107,8 +108,6 @@
   --page-gradient-end: #f8faff;
   --hero-glow-a: rgb(129 140 248 / 0.24);
   --hero-glow-b: rgb(167 139 250 / 0.18);
-  --silk-a: rgb(224 231 255 / 0.95);
-  --silk-b: rgb(244 247 255 / 0.9);
   --nav-glass: rgb(238 242 255 / 0.92);
   --slot-webster-bg: rgb(224 231 255 / 0.82);
   --slot-webster-border: rgb(129 140 248 / 0.45);
@@ -122,7 +121,7 @@
   --foreground: #3d2a32;
   --card: #fffbfd;
   --card-foreground: #3d2a32;
-  --primary: #e889a8;
+  --primary: #d96f93;
   --primary-foreground: #fff8fb;
   --secondary: #fff0f5;
   --secondary-foreground: #6b3d52;
@@ -134,7 +133,7 @@
   --border: #f0d4e0;
   --sidebar: #fff5f9;
   --sidebar-foreground: #3d2a32;
-  --sidebar-primary: #e889a8;
+  --sidebar-primary: #d96f93;
   --sidebar-primary-foreground: #fff8fb;
   --sidebar-accent: #e8f7eb;
   --sidebar-accent-foreground: #2f5a3a;
@@ -145,13 +144,52 @@
   --page-gradient-end: #e8f7eb;
   --hero-glow-a: rgb(232 137 168 / 0.28);
   --hero-glow-b: rgb(123 200 138 / 0.24);
-  --silk-a: rgb(255 240 245 / 0.95);
-  --silk-b: rgb(232 247 235 / 0.92);
   --nav-glass: rgb(255 245 249 / 0.92);
   --slot-webster-bg: rgb(255 240 245 / 0.88);
   --slot-webster-border: rgb(232 137 168 / 0.55);
   --slot-binghamton-bg: rgb(232 247 235 / 0.9);
   --slot-binghamton-border: rgb(123 200 138 / 0.55);
+}
+
+[data-theme="halloween"] {
+  /* Seasonal: midnight purple, pumpkin orange, slime green. Dark, so native
+     form controls (date pickers, selects) switch to their dark versions too. */
+  color-scheme: dark;
+  --background: #0f0a14;
+  --foreground: #f3e9dc;
+  --card: #1a1222;
+  --card-foreground: #f3e9dc;
+  /* Orange toned down from #ff7a1a (saturation 100% -> 84%); green kept vivid. */
+  --primary: #ef8a45;
+  --primary-foreground: #1a0d05;
+  --secondary: #2a1a38;
+  --secondary-foreground: #e9d8ff;
+  --muted: #1f1629;
+  --muted-foreground: #b9a7c9;
+  --accent: #a3e635;
+  --accent-foreground: #0f0a14;
+  --destructive: #f87171;
+  --success: #86efac;
+  --warning: #fcd34d;
+  --border: #3b2a4a;
+  --sidebar: #140d1b;
+  --sidebar-foreground: #f3e9dc;
+  --sidebar-primary: #ef8a45;
+  --sidebar-primary-foreground: #1a0d05;
+  --sidebar-accent: #2a1a38;
+  --sidebar-accent-foreground: #f4b886;
+  --sidebar-border: #3b2a4a;
+  --sidebar-ring: #a3e635;
+  --page-gradient-start: #0f0a14;
+  --page-gradient-mid: #170d20;
+  --page-gradient-end: #120a10;
+  --hero-glow-a: rgb(239 138 69 / 0.1);
+  --hero-glow-b: rgb(147 51 234 / 0.16);
+  --nav-glass: rgb(20 13 27 / 0.92);
+  --slot-webster-bg: rgb(239 138 69 / 0.16);
+  --slot-webster-border: rgb(239 138 69 / 0.5);
+  --slot-binghamton-bg: rgb(163 230 53 / 0.12);
+  --slot-binghamton-border: rgb(163 230 53 / 0.45);
 }
 
 @layer base {
@@ -206,9 +244,6 @@
   }
   .animate-list-item {
     animation: portfolio-item-enter var(--duration-slow) var(--ease-emphasis) both;
-  }
-  .animate-rotate-word {
-    animation: rotate-word 500ms var(--ease-emphasis) both;
   }
   .animate-calendar-view-enter {
     animation: calendar-view-enter var(--duration-normal) var(--ease-emphasis) both;
@@ -273,10 +308,6 @@
   .spotlight-card:focus-within::before {
     opacity: 1;
   }
-  .square-iframe-container {
-    min-height: min(720px, 85vh);
-    -webkit-overflow-scrolling: touch;
-  }
   .scroll-reveal {
     overflow: hidden;
   }
@@ -310,38 +341,6 @@
     transform: translate3d(0, -2.75rem, 0) scaleY(0.9);
     transform-origin: top center;
   }
-}
-
-.silk-layer {
-  position: absolute;
-  inset: -20%;
-  filter: blur(40px);
-  opacity: 0.75;
-  animation: silk-drift 16s ease-in-out infinite alternate;
-}
-.silk-layer-a {
-  background: radial-gradient(circle at 20% 30%, var(--hero-glow-a), transparent 55%);
-}
-.silk-layer-b {
-  background: radial-gradient(circle at 80% 70%, var(--hero-glow-b), transparent 50%);
-  animation-delay: -6s;
-}
-
-.star-border {
-  position: relative;
-  padding: 2px;
-  background: linear-gradient(
-    120deg,
-    var(--accent),
-    var(--primary),
-    var(--accent)
-  );
-  background-size: 200% 200%;
-  animation: star-border-shift 4s linear infinite;
-}
-.star-border-inner {
-  background: var(--primary);
-  color: var(--primary-foreground);
 }
 
 .profile-card {
@@ -380,6 +379,11 @@
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
+.book-cta-glow {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.35);
+}
+
 .mobile-bottom-nav {
   position: relative;
   z-index: 40;
@@ -391,97 +395,6 @@
 .app-scroll-region {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-}
-
-@media (min-width: 768px) {
-  [data-slot="sidebar"][data-side="left"] > [data-slot="sidebar-container"].sidebar-slide-panel {
-    transform: translate3d(0, 0, 0);
-    will-change: transform;
-  }
-
-  [data-slot="sidebar"][data-side="left"]
-    > [data-slot="sidebar-container"].sidebar-slide-panel.sidebar-slide-panel--motion-ready {
-    transition:
-      transform 400ms var(--ease-emphasis),
-      box-shadow 400ms var(--ease-emphasis);
-  }
-
-  [data-slot="sidebar"][data-side="left"]
-    > [data-slot="sidebar-container"].sidebar-slide-panel.sidebar-slide-panel--collapsed {
-    transform: translate3d(calc(-100% + 0.5rem), 0, 0);
-    box-shadow: 6px 0 24px -10px color-mix(in srgb, var(--primary) 16%, transparent);
-  }
-
-  [data-slot="sidebar"][data-side="left"]
-    > [data-slot="sidebar-container"].sidebar-slide-panel.sidebar-slide-panel--expanded {
-    transform: translate3d(0, 0, 0);
-    box-shadow:
-      0 28px 56px -18px color-mix(in srgb, var(--primary) 32%, transparent),
-      8px 0 32px -8px color-mix(in srgb, var(--accent) 24%, transparent);
-  }
-
-  [data-slot="sidebar"][data-side="left"] > .sidebar-layout-gap {
-    width: var(--sidebar-width, 16rem);
-  }
-
-  [data-slot="sidebar"][data-side="left"]
-    > .sidebar-layout-gap.sidebar-layout-gap--motion-ready {
-    transition: width 400ms var(--ease-emphasis);
-  }
-
-  [data-slot="sidebar"][data-side="left"]
-    > .sidebar-layout-gap.sidebar-layout-gap--collapsed {
-    width: 0;
-  }
-
-  [data-slot="sidebar"][data-side="left"]
-    > .sidebar-layout-gap.sidebar-layout-gap--expanded {
-    width: var(--sidebar-width, 16rem);
-  }
-
-  [data-slot="sidebar"][data-side="left"][data-state="collapsed"] [data-slot="sidebar-inner"] {
-    border-right: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  }
-}
-
-.sidebar-hover-tab {
-  position: fixed;
-  left: 0;
-  top: 5.25rem;
-  z-index: 55;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 4.75rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-left: none;
-  border-radius: 0 999px 999px 0;
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--sidebar) 96%, var(--accent)),
-    color-mix(in srgb, var(--muted) 88%, var(--background))
-  );
-  box-shadow:
-    4px 0 16px -6px color-mix(in srgb, var(--primary) 22%, transparent),
-    inset -4px 0 10px -6px color-mix(in srgb, var(--accent) 20%, transparent);
-  cursor: default;
-  outline: none;
-  transition:
-    transform 350ms var(--ease-emphasis),
-    width 350ms var(--ease-emphasis),
-    box-shadow 350ms var(--ease-emphasis),
-    border-color 350ms var(--ease-emphasis);
-}
-
-.sidebar-hover-tab:hover,
-.sidebar-hover-tab:focus-visible {
-  width: 2rem;
-  transform: translateX(0.75rem);
-  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
-  box-shadow:
-    8px 0 24px -4px color-mix(in srgb, var(--primary) 28%, transparent),
-    inset -6px 0 12px -4px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .mobile-ambient-bg {
@@ -515,22 +428,91 @@
     position: relative;
     z-index: 1;
   }
+
+  .site-header-shadow {
+    box-shadow: 0 4px 24px -12px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
 }
 
 @media (max-width: 640px) {
-  .square-iframe-container {
-    min-height: 75vh;
-  }
-  .square-iframe-container iframe {
-    min-height: 75vh;
-  }
   .profile-card {
     transform: none;
   }
-  .silk-layer {
-    animation: none;
-    opacity: 0.45;
+}
+
+/* ---------------------------------------------------------------------------
+   Halloween effects (rendered by components/effects/halloween.tsx only while
+   the halloween theme is active). CSS-only so they never re-render React.
+   --------------------------------------------------------------------------- */
+
+[data-theme="halloween"] .seasonal-title {
+  font-family: var(--font-creepster), var(--font-cormorant), serif;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+}
+
+/* Page sections are transparent so the pumpkin pattern shows behind them;
+   cards, photos and the header keep their own solid backgrounds. */
+[data-theme="halloween"] .page-gradient {
+  background: transparent;
+}
+
+/* Pumpkin tile (public/effects/pumpkins.svg) drifting diagonally, entirely
+   behind the content. SidebarInset is an isolated stacking context, so
+   z-index -1 paints above its background but under the page on desktop; on
+   mobile its children are z-index 1 (.mobile-ambient-bg > *), so 0 does the
+   same there. The layer overhangs by one tile and moves exactly one tile per
+   loop, so the repeat is seamless. */
+.halloween-pumpkins,
+.mobile-ambient-bg > .halloween-pumpkins {
+  position: fixed;
+  top: -180px;
+  left: -180px;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.13;
+  background: url("/effects/pumpkins.svg") 0 0 / 180px 180px repeat;
+  animation: pumpkin-drift 45s linear infinite;
+  will-change: transform;
+}
+
+@media (max-width: 767px) {
+  .mobile-ambient-bg > .halloween-pumpkins {
+    z-index: 0;
   }
+}
+
+/* Fixed fog along the bottom, in front of the page. Inside SidebarInset it
+   stays below the mobile bottom nav (both z-index 1 there, nav comes later). */
+.halloween-fog,
+.mobile-ambient-bg > .halloween-fog {
+  position: fixed;
+  left: -20%;
+  right: -20%;
+  bottom: 0;
+  height: 40vh;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.42;
+  background:
+    radial-gradient(ellipse 60% 75% at 25% 100%, rgb(147 51 234 / 0.75), transparent 70%),
+    radial-gradient(ellipse 50% 65% at 75% 100%, rgb(163 230 53 / 0.5), transparent 70%),
+    radial-gradient(ellipse 45% 45% at 50% 100%, rgb(233 216 255 / 0.45), transparent 70%);
+  animation: fog-drift 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes pumpkin-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(180px, 180px, 0); }
+}
+
+@keyframes fog-drift {
+  from { transform: translate3d(-6%, 0, 0); }
+  to { transform: translate3d(6%, 0, 0); }
 }
 
 @keyframes page-enter {
@@ -552,35 +534,6 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes rotate-word {
-  from {
-    opacity: 0;
-    transform: translateY(0.35em);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes star-border-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
-}
-
-@keyframes silk-drift {
-  from {
-    transform: translate3d(-2%, -1%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(2%, 1%, 0) scale(1.04);
   }
 }
 
@@ -621,12 +574,9 @@
   .animate-page-enter,
   .animate-portfolio-item,
   .animate-list-item,
-  .animate-rotate-word,
   .animate-calendar-view-enter,
   .animate-calendar-slide-next,
-  .animate-calendar-slide-prev,
-  .silk-layer,
-  .star-border {
+  .animate-calendar-slide-prev {
     animation: none !important;
   }
   .scroll-reveal-inner {
@@ -636,5 +586,11 @@
   }
   .profile-card {
     transform: none !important;
+  }
+  .halloween-pumpkins,
+  .mobile-ambient-bg > .halloween-pumpkins,
+  .halloween-fog,
+  .mobile-ambient-bg > .halloween-fog {
+    animation: none;
   }
 }

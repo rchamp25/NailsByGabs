@@ -2,10 +2,19 @@ import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
+/**
+ * Local development delivers to Mailpit, which accepts any address, so the
+ * seeded placeholder owner (gabs@example.com) is a valid recipient there.
+ */
+function isLocalMailpit(): boolean {
+  return process.env.NODE_ENV !== "production" && !!process.env.DEV_MAILPIT_URL?.trim();
+}
+
 function isValidNotificationEmail(email: string | undefined | null): email is string {
   const trimmed = email?.trim();
-  if (!trimmed) return false;
-  if (!trimmed.includes("@") || trimmed.includes("example.com")) return false;
+  if (!trimmed || !trimmed.includes("@")) return false;
+  // Skip the placeholder from migration 001 so production never emails it.
+  if (trimmed.includes("example.com") && !isLocalMailpit()) return false;
   return true;
 }
 

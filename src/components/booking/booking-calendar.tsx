@@ -82,6 +82,43 @@ export function BookingCalendar({
   const [editEndAt, setEditEndAt] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editBookedName, setEditBookedName] = useState("");
+  const [dropTarget, setDropTarget] = useState<{
+    slot: SlotWithBooker;
+    mode: "release" | "delete";
+  } | null>(null);
+  const [dropMessage, setDropMessage] = useState("");
+
+  /** Upcoming bookings made through the site; Gabs's changes email these clients. */
+  function emailsClient(slot: SlotWithBooker): boolean {
+    return (
+      slot.status === "booked" &&
+      !!slot.booked_by &&
+      new Date(slot.end_at).getTime() > Date.now()
+    );
+  }
+
+  function clientFirstName(slot: SlotWithBooker): string {
+    return slot.booker?.full_name?.trim().split(/\s+/)[0] || "the client";
+  }
+
+  function requestDrop(slot: SlotWithBooker, mode: "release" | "delete") {
+    if (!emailsClient(slot)) {
+      runAction(() => (mode === "release" ? releaseSlot(slot.id) : deleteSlot(slot.id)));
+      return;
+    }
+    setDropMessage("");
+    setDropTarget({ slot, mode });
+  }
+
+  function confirmDrop() {
+    if (!dropTarget) return;
+    const { slot, mode } = dropTarget;
+    const message = dropMessage;
+    setDropTarget(null);
+    runAction(() =>
+      mode === "release" ? releaseSlot(slot.id, message) : deleteSlot(slot.id, message)
+    );
+  }
 
   function formatDateTimeLocal(date: Date): string {
     const year = date.getFullYear();
@@ -534,7 +571,7 @@ export function BookingCalendar({
                     variant="outline"
                     size="sm"
                     disabled={pending}
-                    onClick={() => runAction(() => releaseSlot(activeSlot.id))}
+                    onClick={() => requestDrop(activeSlot, "release")}
                   >
                     <Undo2 className="size-4" />
                     Release
@@ -543,7 +580,7 @@ export function BookingCalendar({
                     variant="outline"
                     size="sm"
                     disabled={pending}
-                    onClick={() => runAction(() => deleteSlot(activeSlot.id))}
+                    onClick={() => requestDrop(activeSlot, "delete")}
                   >
                     <Trash2 className="size-4" />
                     Delete
@@ -689,6 +726,25 @@ export function BookingCalendar({
                   )}
                 </div>
               )}
+              {emailsClient(editTarget) && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="editClientMessage">
+                    Message to {clientFirstName(editTarget)} (optional)
+                  </Label>
+                  <Textarea
+                    id="editClientMessage"
+                    name="clientMessage"
+                    rows={3}
+                    maxLength={500}
+                    placeholder="e.g. Running behind that day, so I moved you 30 minutes later!"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    If you change the time or location, {clientFirstName(editTarget)} gets a
+                    &ldquo;Gabs updated your appointment&rdquo; email with the new details
+                    and this note.
+                  </p>
+                </div>
+              )}
               {updateState?.error && (
                 <p className="text-destructive text-sm sm:col-span-2" role="alert">
                   {updateState.error}
@@ -708,6 +764,56 @@ export function BookingCalendar({
                 </Button>
               </div>
             </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!dropTarget}
+        onOpenChange={(open) => {
+          if (!open) setDropTarget(null);
+        }}
+      >
+        <DialogContent>
+          {dropTarget && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {dropTarget.mode === "release" ? "Release" : "Delete"} this appointment?
+                </DialogTitle>
+                <DialogDescription>
+                  {formatSlotRange(dropTarget.slot.start_at, dropTarget.slot.end_at)} ·{" "}
+                  {getLocationShortLabel(dropTarget.slot.location)}
+                  <br />
+                  {dropTarget.mode === "release"
+                    ? "The time reopens for other clients."
+                    : "The slot is removed from your calendar."}{" "}
+                  {clientFirstName(dropTarget.slot)} will get a &ldquo;Gabs dropped your
+                  appointment&rdquo; email.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="dropMessage">
+                  Message to {clientFirstName(dropTarget.slot)} (optional)
+                </Label>
+                <Textarea
+                  id="dropMessage"
+                  rows={3}
+                  maxLength={500}
+                  value={dropMessage}
+                  onChange={(event) => setDropMessage(event.target.value)}
+                  placeholder="e.g. So sorry, something came up! Please grab another time."
+                />
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setDropTarget(null)}>
+                  Keep appointment
+                </Button>
+                <Button type="button" disabled={pending} onClick={confirmDrop}>
+                  {dropTarget.mode === "release" ? "Release" : "Delete"} &amp; email client
+                </Button>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

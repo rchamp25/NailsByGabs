@@ -23,7 +23,7 @@ function ActionMessage({ state }: { state: ClientsActionState | null }) {
   if (state?.success && state.message) {
     return (
       <p
-        className="text-sm text-emerald-800 dark:text-emerald-300"
+        className="text-sm text-success"
         role="status"
       >
         {state.message}
@@ -98,8 +98,8 @@ function ClientRow({ client }: { client: OwnerClientRow }) {
             className={cn(
               "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
               client.emailVerified
-                ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
-                : "bg-amber-500/15 text-amber-900 dark:text-amber-200"
+                ? "bg-emerald-500/15 text-success"
+                : "bg-amber-500/15 text-warning"
             )}
           >
             {client.emailVerified ? "Email verified" : "Not verified"}

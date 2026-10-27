@@ -10,6 +10,8 @@ type ProfileCardProps = {
   subtitle: string;
   imageSrc: string;
   imageAlt: string;
+  /** CSS object-position for the crop, e.g. to keep a face in frame. */
+  imagePosition?: string;
   className?: string;
 };
 
@@ -18,6 +20,7 @@ export function ProfileCard({
   subtitle,
   imageSrc,
   imageAlt,
+  imagePosition = "50% 50%",
   className,
 }: ProfileCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -57,7 +60,8 @@ export function ProfileCard({
         alt={imageAlt}
         fill
         sizes="(max-width: 1024px) 100vw, 480px"
-        className="object-cover object-center"
+        className="object-cover"
+        style={{ objectPosition: imagePosition }}
         priority
       />
       <div className="profile-card-glare pointer-events-none absolute inset-0" />

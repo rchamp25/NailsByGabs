@@ -38,3 +38,6 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+# Full-size photo originals (web copies live in public/ as WebP; see scripts/optimize-images.mjs)
+/image-originals/

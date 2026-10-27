@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      # Placeholder Supabase values let the build run without real secrets;
+      # pages are rendered per request, so nothing contacts Supabase here.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_SITE_URL: https://nailsbygabs.org
+
+      # Reports vulnerable runtime dependencies. Non-blocking until the open
+      # advisories (security gap S1 in docs/PROJECT_ARCHITECTURE.md) are fixed;
+      # then remove continue-on-error so new advisories fail the build.
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

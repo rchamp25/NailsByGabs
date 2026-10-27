@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSessionProfile } from "@/lib/auth";
+import { getOwnerSession } from "@/lib/auth";
 import { exchangeGoogleCode } from "@/lib/google-calendar";
 import { getSiteUrl } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
@@ -11,11 +11,12 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const state = searchParams.get("state");
 
-  const { user, profile } = await getSessionProfile();
+  const owner = await getOwnerSession();
 
-  if (!user || profile?.role !== "owner" || !code || state !== user.id) {
+  if (!owner || !code || state !== owner.user.id) {
     return NextResponse.redirect(`${siteUrl}/book?google=error`);
   }
+  const { user } = owner;
 
   const refreshToken = await exchangeGoogleCode(code);
   if (!refreshToken) {

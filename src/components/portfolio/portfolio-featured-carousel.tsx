@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
+  memo,
   useCallback,
   useEffect,
   useRef,
@@ -11,16 +11,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { PortfolioLightbox } from "@/components/portfolio/portfolio-lightbox";
 import { Button } from "@/components/ui/button";
-
-type FeaturedImage = {
-  src: string;
-  title: string;
-  focal: string;
-};
+import type { PortfolioImage } from "@/lib/portfolio";
 
 type PortfolioFeaturedCarouselProps = {
-  images: FeaturedImage[];
+  images: PortfolioImage[];
 };
 
 const SCROLL_SPEED_PX_PER_SEC = 84;
@@ -28,6 +24,11 @@ const CARD_GAP_PX = 16;
 const DRAG_CLICK_THRESHOLD_PX = 8;
 const AXIS_COMMIT_PX = 8;
 const AXIS_LOCK_RATIO = 1.15;
+/**
+ * Cards repeated after the real set so the loop is seamless: enough to cover
+ * the widest viewport (8 x 296px). Far cheaper than a full second copy.
+ */
+const LOOP_CLONES = 8;
 
 type DragIntent = "none" | "pending" | "horizontal" | "vertical";
 
@@ -36,24 +37,28 @@ function normalizeOffset(value: number, setWidth: number): number {
   return ((value % setWidth) + setWidth) % setWidth;
 }
 
-function CarouselCard({
+/** Memoized: carousel state changes (e.g. opening the preview) never re-render the cards. */
+const CarouselCard = memo(function CarouselCard({
   image,
+  index,
   priority,
-  onNavigate,
+  onOpen,
 }: {
-  image: FeaturedImage;
+  image: PortfolioImage;
+  /** Index into the real (un-cloned) images list. */
+  index: number;
   priority?: boolean;
-  onNavigate: (event: { preventDefault: () => void }) => void;
+  onOpen: (index: number) => void;
 }) {
   return (
-    <Link
-      href="/book"
+    <button
+      type="button"
       data-carousel-card
+      data-carousel-index={index}
       draggable={false}
-      className="motion-card relative aspect-[4/5] w-[min(78vw,280px)] shrink-0 overflow-hidden rounded-2xl border border-border/60"
-      onClick={(event) => {
-        onNavigate(event);
-      }}
+      aria-label={`View ${image.title} full screen`}
+      className="motion-card relative aspect-[4/5] w-[min(78vw,280px)] shrink-0 overflow-hidden rounded-2xl border border-border/60 text-left"
+      onClick={() => onOpen(index)}
     >
       <Image
         src={image.src}
@@ -67,19 +72,33 @@ function CarouselCard({
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4">
         <p className="font-medium text-white">{image.title}</p>
-        <p className="text-xs text-white/75">Tap to book</p>
       </div>
-    </Link>
+    </button>
   );
-}
+});
 
+/**
+ * Auto-scrolling, draggable, infinite carousel.
+ *
+ * Performance rules (each one fixed a real problem):
+ * - The scroll offset, drag state and pause state live in refs and the DOM,
+ *   never in React state. State updates here re-rendered every card: per
+ *   frame it starved navigations; per touch it froze the start of each drag.
+ * - One requestAnimationFrame loop runs for the component's lifetime and
+ *   simply skips advancing while paused.
+ * - Only LOOP_CLONES cards are duplicated for the seamless wrap.
+ */
 export function PortfolioFeaturedCarousel({
   images,
 }: PortfolioFeaturedCarouselProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const offsetRef = useRef(0);
+  /** Width of one pass through the real images (where the loop wraps). */
   const setWidthRef = useRef(0);
+  const draggingRef = useRef(false);
+  const reducedMotionRef = useRef(false);
+  const lightboxOpenRef = useRef(false);
   const dragIntentRef = useRef<DragIntent>("none");
   const activePointerIdRef = useRef<number | null>(null);
   const dragStartXRef = useRef(0);
@@ -87,89 +106,73 @@ export function PortfolioFeaturedCarousel({
   const dragStartOffsetRef = useRef(0);
   const didDragRef = useRef(false);
   const dragRafRef = useRef(0);
-  const [offset, setOffset] = useState(0);
-  const [setWidth, setSetWidth] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  /** Card under the pointer at pointerdown, so a mouse click (no drag) can open it. */
+  const pressedIndexRef = useRef<number | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const loopImages =
-    images.length > 0 ? [...images, ...images] : [];
+    images.length > 1
+      ? [...images, ...images.slice(0, Math.min(LOOP_CLONES, images.length))]
+      : images;
 
-  const applyOffset = useCallback((next: number, syncState = true) => {
+  const applyOffset = useCallback((next: number) => {
     offsetRef.current = next;
     const track = trackRef.current;
     if (track) {
       track.style.transform = `translate3d(-${next}px, 0, 0)`;
     }
-    if (syncState) {
-      setOffset(next);
-    }
   }, []);
 
-  const scheduleDragOffset = useCallback(
-    (next: number) => {
-      offsetRef.current = next;
-      if (dragRafRef.current) return;
+  const scheduleDragOffset = useCallback((next: number) => {
+    // Wrap while dragging so content never runs out at either end.
+    offsetRef.current = normalizeOffset(next, setWidthRef.current);
+    if (dragRafRef.current) return;
 
-      dragRafRef.current = window.requestAnimationFrame(() => {
-        dragRafRef.current = 0;
-        const track = trackRef.current;
-        if (track) {
-          track.style.transform = `translate3d(-${offsetRef.current}px, 0, 0)`;
-        }
-      });
-    },
-    []
-  );
+    dragRafRef.current = window.requestAnimationFrame(() => {
+      dragRafRef.current = 0;
+      const track = trackRef.current;
+      if (track) {
+        track.style.transform = `translate3d(-${offsetRef.current}px, 0, 0)`;
+      }
+    });
+  }, []);
 
-  const measureSetWidth = useCallback(() => {
-    const track = trackRef.current;
-    if (!track || images.length === 0) return;
-    const nextSetWidth = track.scrollWidth / 2;
-    setWidthRef.current = nextSetWidth;
-    setSetWidth(nextSetWidth);
-  }, [images.length]);
-
+  // Loop width = position of the first clone (the real set's full width incl. gaps).
   useEffect(() => {
-    measureSetWidth();
     const track = trackRef.current;
-    if (!track) return;
+    if (!track || images.length <= 1) return;
 
-    const observer = new ResizeObserver(measureSetWidth);
+    const measure = () => {
+      const firstClone = track.children[images.length] as HTMLElement | undefined;
+      const first = track.children[0] as HTMLElement | undefined;
+      if (!firstClone || !first) return;
+      setWidthRef.current = firstClone.offsetLeft - first.offsetLeft;
+      applyOffset(normalizeOffset(offsetRef.current, setWidthRef.current));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(track);
     return () => observer.disconnect();
-  }, [measureSetWidth]);
-
-  useEffect(() => {
-    setWidthRef.current = setWidth;
-  }, [setWidth]);
-
-  useEffect(() => {
-    applyOffset(offsetRef.current);
-  }, [applyOffset]);
-
-  useEffect(() => {
-    return () => {
-      if (dragRafRef.current) {
-        window.cancelAnimationFrame(dragRafRef.current);
-      }
-    };
-  }, []);
+  }, [images.length, applyOffset]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (media.matches) setIsPaused(true);
-
-    function onChange(event: MediaQueryListEvent) {
-      if (event.matches) setIsPaused(true);
-    }
-
+    reducedMotionRef.current = media.matches;
+    const onChange = (event: MediaQueryListEvent) => {
+      reducedMotionRef.current = event.matches;
+    };
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
   }, []);
 
   useEffect(() => {
-    if (images.length <= 1 || isPaused || isDragging || setWidth <= 0) return;
+    lightboxOpenRef.current = lightboxIndex !== null;
+  }, [lightboxIndex]);
+
+  // Single auto-scroll loop; it skips advancing while paused instead of restarting.
+  useEffect(() => {
+    if (images.length <= 1) return;
 
     let rafId = 0;
     let lastTime = performance.now();
@@ -177,65 +180,54 @@ export function PortfolioFeaturedCarousel({
     const tick = (now: number) => {
       const deltaSeconds = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
+      const width = setWidthRef.current;
+      const paused =
+        draggingRef.current || reducedMotionRef.current || lightboxOpenRef.current;
 
-      let next = offsetRef.current + SCROLL_SPEED_PX_PER_SEC * deltaSeconds;
-      if (next >= setWidth) {
-        next -= setWidth;
+      if (!paused && width > 0) {
+        let next = offsetRef.current + SCROLL_SPEED_PX_PER_SEC * deltaSeconds;
+        if (next >= width) next -= width;
+        applyOffset(next);
       }
-
-      applyOffset(next);
       rafId = requestAnimationFrame(tick);
     };
 
     rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [images.length, isPaused, isDragging, setWidth, applyOffset]);
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+    };
+  }, [images.length, applyOffset]);
 
   const shift = useCallback(
     (direction: -1 | 1) => {
       const track = trackRef.current;
       const card = track?.querySelector<HTMLElement>("[data-carousel-card]");
       const step = card ? card.offsetWidth + CARD_GAP_PX : 296;
-      const width = setWidthRef.current;
-
-      let next = offsetRef.current + direction * step;
-      if (width > 0) {
-        next = normalizeOffset(next, width);
-      }
-
-      applyOffset(next);
+      applyOffset(normalizeOffset(offsetRef.current + direction * step, setWidthRef.current));
     },
     [applyOffset]
   );
 
+  const setDragging = useCallback((dragging: boolean) => {
+    draggingRef.current = dragging;
+    if (trackRef.current) trackRef.current.style.cursor = dragging ? "grabbing" : "";
+  }, []);
+
   const resetDrag = useCallback(() => {
     dragIntentRef.current = "none";
     activePointerIdRef.current = null;
-    setIsDragging(false);
-    setIsPaused(false);
-  }, []);
-
-  const finishHorizontalDrag = useCallback(() => {
-    if (dragIntentRef.current !== "horizontal") {
-      resetDrag();
-      return;
-    }
-
-    const width = setWidthRef.current;
-    const next = normalizeOffset(offsetRef.current, width);
-    applyOffset(next);
-    resetDrag();
-  }, [applyOffset, resetDrag]);
+    setDragging(false);
+  }, [setDragging]);
 
   const commitHorizontalDrag = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       dragIntentRef.current = "horizontal";
-      setIsDragging(true);
-      setIsPaused(true);
+      setDragging(true);
       activePointerIdRef.current = event.pointerId;
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    []
+    [setDragging]
   );
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -248,10 +240,13 @@ export function PortfolioFeaturedCarousel({
     dragStartYRef.current = event.clientY;
     dragStartOffsetRef.current = offsetRef.current;
     didDragRef.current = false;
+    const pressed = (event.target as Element).closest("[data-carousel-index]");
+    pressedIndexRef.current = pressed
+      ? Number(pressed.getAttribute("data-carousel-index"))
+      : null;
 
     if (event.pointerType === "mouse") {
       commitHorizontalDrag(event);
-      return;
     }
   };
 
@@ -269,37 +264,24 @@ export function PortfolioFeaturedCarousel({
     const absY = Math.abs(deltaY);
 
     if (dragIntentRef.current === "pending") {
-      if (absX < AXIS_COMMIT_PX && absY < AXIS_COMMIT_PX) {
-        return;
-      }
+      if (absX < AXIS_COMMIT_PX && absY < AXIS_COMMIT_PX) return;
 
       if (absY > absX * AXIS_LOCK_RATIO) {
+        // Vertical swipe: let the page scroll.
         dragIntentRef.current = "vertical";
         activePointerIdRef.current = null;
         return;
       }
-
-      if (absX > absY * AXIS_LOCK_RATIO) {
-        commitHorizontalDrag(event);
-      } else {
-        return;
-      }
+      if (absX <= absY * AXIS_LOCK_RATIO) return;
+      commitHorizontalDrag(event);
     }
 
-    if (dragIntentRef.current === "vertical") {
-      return;
-    }
-
-    if (dragIntentRef.current !== "horizontal") {
-      return;
-    }
+    if (dragIntentRef.current !== "horizontal") return;
 
     if (absX > DRAG_CLICK_THRESHOLD_PX) {
       didDragRef.current = true;
     }
-
-    const next = dragStartOffsetRef.current + deltaX;
-    scheduleDragOffset(next);
+    scheduleDragOffset(dragStartOffsetRef.current + deltaX);
   };
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -317,22 +299,25 @@ export function PortfolioFeaturedCarousel({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    if (dragIntentRef.current === "horizontal") {
-      finishHorizontalDrag();
-      return;
+    // Mouse presses capture the pointer for dragging, so the card never gets
+    // its click event; a press without movement opens the preview here.
+    if (
+      dragIntentRef.current === "horizontal" &&
+      event.type === "pointerup" &&
+      event.pointerType === "mouse" &&
+      !didDragRef.current &&
+      pressedIndexRef.current !== null
+    ) {
+      setLightboxIndex(pressedIndexRef.current);
     }
 
     resetDrag();
   };
 
-  const handleNavigate = useCallback(
-    (event: { preventDefault: () => void }) => {
-      if (didDragRef.current) {
-        event.preventDefault();
-      }
-    },
-    []
-  );
+  /** Touch taps and keyboard activation reach the card's own click handler. */
+  const openFromCard = useCallback((index: number) => {
+    if (!didDragRef.current) setLightboxIndex(index);
+  }, []);
 
   if (images.length === 0) return null;
 
@@ -378,25 +363,20 @@ export function PortfolioFeaturedCarousel({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       >
-        <div
-          ref={trackRef}
-          className="flex w-max gap-4"
-          style={{
-            transform: `translate3d(-${offset}px, 0, 0)`,
-            willChange: "transform",
-            cursor: isDragging ? "grabbing" : undefined,
-          }}
-        >
-          {loopImages.map((image, index) => (
+        <div ref={trackRef} className="flex w-max gap-4" style={{ willChange: "transform" }}>
+          {loopImages.map((image, position) => (
             <CarouselCard
-              key={`${image.src}-${index}`}
+              key={`${image.src}-${position}`}
               image={image}
-              priority={index < 4}
-              onNavigate={handleNavigate}
+              index={position % images.length}
+              priority={position < 4}
+              onOpen={openFromCard}
             />
           ))}
         </div>
       </div>
+
+      <PortfolioLightbox images={images} index={lightboxIndex} onIndexChange={setLightboxIndex} />
     </section>
   );
 }

@@ -1,16 +1,10 @@
-import { redirect } from "next/navigation";
-
 import { ClientsList } from "@/components/clients/clients-list";
 import { SiteHeader } from "@/components/site-header";
-import { getSessionProfile } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { listOwnerClients } from "@/lib/clients";
 
 export default async function ClientsPage() {
-  const { profile } = await getSessionProfile();
-
-  if (!profile || profile.role !== "owner") {
-    redirect("/");
-  }
+  await requireOwner();
 
   const { clients, error } = await listOwnerClients();
 

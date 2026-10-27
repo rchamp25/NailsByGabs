@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getSessionProfile } from "@/lib/auth";
+import { getOwnerSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type ServicesActionState = {
@@ -14,8 +14,7 @@ export async function updateServiceItem(
   _prev: ServicesActionState | null,
   formData: FormData
 ): Promise<ServicesActionState> {
-  const { profile } = await getSessionProfile();
-  if (!profile || profile.role !== "owner") {
+  if (!(await getOwnerSession())) {
     return { error: "Only the owner can edit prices." };
   }
 

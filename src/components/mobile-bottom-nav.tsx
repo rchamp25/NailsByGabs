@@ -3,30 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  BarChart3,
-  CalendarHeart,
-  Images,
-  Palette,
-  Sparkles,
-  UserRound,
-  Users,
-} from "lucide-react";
 
+import { isNavItemActive, OWNER_NAV, PUBLIC_NAV } from "@/lib/nav";
 import { cn } from "@/lib/utils";
-
-const baseItems = [
-  { title: "Portfolio", href: "/", icon: Images, short: "Gallery" },
-  { title: "Book", href: "/book", icon: CalendarHeart, short: "Book" },
-  { title: "Services", href: "/services", icon: Sparkles, short: "Prices" },
-  { title: "About", href: "/about", icon: UserRound, short: "About" },
-] as const;
-
-const ownerItems = [
-  { title: "Stats", href: "/analytics", icon: BarChart3, short: "Stats" },
-  { title: "Clients", href: "/clients", icon: Users, short: "Clients" },
-  { title: "Theme", href: "/settings", icon: Palette, short: "Theme" },
-] as const;
 
 type MobileBottomNavProps = {
   isOwner?: boolean;
@@ -41,15 +20,11 @@ export function MobileBottomNav({ isOwner = false }: MobileBottomNavProps) {
   }, []);
 
   const items = useMemo(
-    () => (isOwner ? [...baseItems, ...ownerItems] : [...baseItems]),
+    () => (isOwner ? [...PUBLIC_NAV, ...OWNER_NAV] : PUBLIC_NAV),
     [isOwner]
   );
 
-  const activeIndex = items.findIndex((item) =>
-    item.href === "/"
-      ? pathname === "/"
-      : pathname.startsWith(item.href)
-  );
+  const activeIndex = items.findIndex((item) => isNavItemActive(item.href, pathname));
 
   if (!mounted || pathname.startsWith("/auth")) {
     return null;
@@ -73,10 +48,7 @@ export function MobileBottomNav({ isOwner = false }: MobileBottomNavProps) {
           style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
         >
           {items.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
+            const isActive = isNavItemActive(item.href, pathname);
 
             return (
               <li key={item.href}>
