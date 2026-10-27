@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
@@ -28,7 +29,10 @@ export function PortfolioLightbox({ images, index, onIndexChange }: PortfolioLig
 
   return (
     <Dialog open={activeImage != null} onOpenChange={(open) => !open && onIndexChange(null)}>
-      <DialogContent className="max-w-4xl border-border/80 bg-card/95 p-0 backdrop-blur-md">
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-4xl border-border/80 bg-card/95 p-0 backdrop-blur-md"
+      >
         <DialogTitle className="sr-only">
           {activeImage ? `Portfolio ${activeImage.title}` : "Portfolio image"}
         </DialogTitle>
@@ -46,14 +50,15 @@ export function PortfolioLightbox({ images, index, onIndexChange }: PortfolioLig
                 className="object-cover"
                 style={{ objectPosition: activeImage.focal }}
               />
-              <button
-                type="button"
-                onClick={() => onIndexChange(null)}
-                className="absolute top-3 right-3 rounded-full bg-black/45 p-2 text-white transition hover:bg-black/60"
-                aria-label="Close preview"
-              >
-                <X className="size-4" />
-              </button>
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  className="absolute top-3 right-3 rounded-full bg-black/45 p-2 text-white transition hover:bg-black/60"
+                  aria-label="Close preview"
+                >
+                  <X className="size-4" />
+                </button>
+              </DialogClose>
             </div>
             <div className="p-4">
               <p className="font-serif text-xl text-primary">{activeImage.title}</p>

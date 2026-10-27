@@ -5,6 +5,8 @@ This document is an in-depth technical overview of **NailsByGabs**, a production
 **Production URL:** [https://nailsbygabs.org](https://nailsbygabs.org)  
 **Repository stack:** Next.js 15 · React 19 · TypeScript · Supabase · Vercel
 
+**Last reviewed:** Codex 1 — 2026-10-27 16:23 EDT
+
 ---
 
 ## Table of Contents
@@ -57,13 +59,14 @@ Understanding the build order matters because later features were layered onto l
 | **2 — Square embed** | Booking page with iframe placeholder | Original booking approach |
 | **3 — Custom booking** | Supabase auth, slot RPCs, owner/client calendar | Owner rejected Square as overkill; wanted login + calendar only, no payments |
 | **4 — Owner tooling** | Manual pre-booked slots, Google Calendar sync, Resend notifications | Real salon workflow needs |
-| **5 — Portfolio intelligence** | Filename-based tag sorting (Aura, 3D, Fun…), display title parsing | Owner renamed photos for categorization |
+| **5 — Portfolio intelligence** | Filename-based tag sorting (Aura, 3D, Design…), display title parsing | Owner renamed photos for categorization |
 | **6 — Production hardening** | Eastern timezone fix, domain (nailsbygabs.org), email verification via Brevo SMTP | Live client usage exposed bugs |
 | **7 — Business intelligence** | Analytics dashboard, event log, backfill, timeframe filters, chart iterations | Owner wanted visibility into bookings/completions/revenue |
-| **8 — UX refinement** | Hover-only desktop sidebar, analytics hover tooltips, chart copy cleanup | Portfolio-first layout vs navigation discoverability |
+| **8 — UX refinement** | Desktop navigation iterations, analytics hover tooltips, chart copy cleanup | Portfolio-first layout vs navigation discoverability |
 | **9 — Client retention** | 48-hour email reminders via daily cron | Chosen as highest-impact next feature without payments |
 | **10 — Security hardening** | Migration 013 (clients read only their own data), owner phone moved to env var, all `.env*` files git-ignored | Review found clients could read every profile, booking name/note, and the owner email through the Supabase API |
 | **11 — Overhaul prep** | `AGENTS.md` shared change log, `CLAUDE.md`, dark-mode variant removed, header shadow made theme-aware | Start of a large visual and content overhaul with multiple agents |
+| **12 — Visual and portfolio overhaul** | Sticky desktop top nav, 40 new sets, WebP image pipeline, seasonal Halloween theme, owner Photos tool, carousel/lightbox performance work | Owner content delivery and mobile performance review |
 
 Each phase added complexity only where the owner confirmed it was needed—Square was removed rather than extended; analytics was backfilled rather than starting from zero; reminders were email-only rather than SMS.
 
@@ -105,20 +108,22 @@ This section documents decisions made explicitly through development prompts—n
 
 **Architectural consequence:** `business-timezone.ts` with iterative DST correction. Triggered by a real bug: 4:30 PM Rochester appeared as 12:30 PM after treating `datetime-local` as UTC.
 
-### 3.6 Portfolio tag system from filenames
+### 3.6 Portfolio tag system and owner overrides
 
-**Decision:** Sort tabs: Aura, Blooming, Fun, Fruit, Ombre, French, Chrome, Cat Eye, 3D. Tags are inferred from filenames. Special rules:
+**Decision:** Sort tabs: Seasonal, Aura, Blooming, Design, Fruit, Ombre, French, Chrome, Cat Eye, 3D. Older photos infer tags from filenames; camera-named sets use explicit metadata. The owner can override tags, titles, carousel inclusion, and order from `/photos`. Special rules:
 
-- `W` in a filename means "with" (multi-tag), e.g. `3DWFun` → **"3D & Fun"**
-- Three or more tags use comma separation: **"3D, Fun, Blooming"**
-- Strip numeric suffixes from display (`Fun3` → `Fun`) but **preserve the 3 in "3D"**
+- `W` in a filename means "with" (multi-tag), e.g. legacy filename `3DWFun` → **"3D & Design"**
+- Three or more tags use comma separation: **"3D, Design, Blooming"**
+- Strip numeric suffixes from display (`Fun3` → `Design`) but **preserve the 3 in "3D"**
 - Lightbox shows descriptors only, never raw filenames
 
-**Architectural consequence:** `portfolio.ts` encodes a static file list plus a parsing layer—photos must be registered in code to appear (see [Section 17.4](#174-portfolio-static-registry-vs-new-uploads)).
+**Architectural consequence:** `portfolio.ts` provides the static registry and defaults; `portfolio_photos` stores owner overrides merged by `getManagedPhotos()`. Photos must still be registered in code to appear (see [Section 17.4](#174-portfolio-static-registry-vs-new-uploads)).
 
 ### 3.7 Branding: GelX Nails
 
-**Decision:** Replace "Premium Nail Artistry" with **"GelX Nails"** in sidebar and tab metadata.
+**Decision:** Replace "Premium Nail Artistry" with **"GelX Nails"** in site metadata and navigation branding.
+
+**Logo state (2026-10-27):** The owner supplied a pink `NAILS / By Gabs` PNG for current logo use. The untouched source is preserved under git-ignored `image-originals/branding/source/`. `public/branding/NailsByGabsLogo.png` is a cropped, metadata-free palette PNG used by the generated Open Graph/Twitter card; `NailsByGabsIcon.png` is the metadata-free 512px favicon, shortcut icon, and Apple touch icon. The main wordmark was tested as WebP, but Next's `ImageResponse` closed the social-image request when embedding the WebP data URI, so the compatible optimized PNG is retained. The desktop top-left navigation remains the text `NailsByGabs` wordmark at the owner's follow-up request.
 
 ### 3.8 Analytics requirements
 
@@ -139,16 +144,17 @@ This section documents decisions made explicitly through development prompts—n
 
 **Architectural consequence:** Migrations 009–011, custom SVG chart component, `buildTrendPoints()` zero-fill logic, and a service-role analytics query path.
 
-### 3.9 Desktop sidebar: hover-only, no click controls
+### 3.9 Desktop navigation: pinned top tab bar
 
-**Decision (iterative):**
+**Decision (iterative):** The desktop navigation went through several sidebar forms before the owner chose a single always-visible top bar:
 
-1. Remove the header sidebar toggle on desktop entirely
-2. Remove the clickable left-edge peek tab
-3. Use **hover-only** navigation on desktop
-4. Final form: a **top-positioned tab** (below header) with **chevron-left**, pill shape, bump-out animation on hover—not a full-height strip
+1. Clickable peek tab
+2. Full-height hover strip
+3. Top chevron hover tab
+4. Tall labeled `MENU` tab
+5. Final form: a **sticky top tab bar** with the brand, labeled public tabs, owner tabs after a divider, social links, and sign in/out
 
-**Architectural consequence:** `SidebarProvider` with `defaultOpen={false}`, mouse enter/leave on the panel, `sidebar-hover-tab` CSS, mobile unchanged (bottom nav).
+**Architectural consequence:** `DesktopNav` lives in the root layout so it stays pinned and does not re-animate between routes. The sidebar components and related CSS were deleted. Mobile keeps its pinned pill bottom navigation.
 
 ### 3.10 48-hour appointment reminders
 
@@ -184,7 +190,7 @@ This section documents decisions made explicitly through development prompts—n
 | Analytics | `/analytics` | KPIs, revenue estimates, splits, trend charts |
 | Clients | `/clients` | Registered clients, verification status, auth helpers |
 | Appearance | `/settings` | Live theme switching (cherry-studio, pearl, flower, seasonal halloween with scheduled switch-back) |
-| Photos | `/photos` | Review/confirm gallery tags, edit titles, pick carousel photos, reorder (migration 015) |
+| Photos | `/photos` | Review/confirm gallery tags, edit titles, pick carousel photos, reorder (migrations 015–016) |
 | Calendar admin | `/book` | Slot CRUD, Google Calendar connect, manual bookings |
 
 ### Explicit non-goals (confirmed, not deferred by accident)
@@ -202,7 +208,7 @@ This section documents decisions made explicitly through development prompts—n
 |-------|--------|-----------|
 | Framework | **Next.js 15** (App Router) | Server Components, Server Actions, Vercel-native |
 | UI | **React 19** + **Tailwind CSS v4** | CSS-variable theming, responsive layout |
-| Components | **Radix UI** primitives | Accessible dialogs, tooltips, sidebar patterns |
+| Components | **Radix UI** primitives | Accessible dialogs and form controls |
 | Language | **TypeScript** (strict) | Server/client boundary safety |
 | Database & Auth | **Supabase** | Postgres, RLS, triggers, RPCs, auth |
 | Email (transactional) | **Resend** | Booking lifecycle emails |
@@ -281,7 +287,7 @@ NailsByGabs/
 │   ├── portfolio/                   # Gallery WebP images (code-registered list in src/lib/portfolio.ts)
 │   ├── effects/                     # Seasonal theme assets (pumpkins.svg)
 │   ├── about/                       # Headshot
-│   └── branding/                    # Logo / favicon
+│   └── branding/                    # Logo source, share wordmark, favicon/app icon
 ├── src/
 │   ├── app/                         # Routes, layouts, actions, API
 │   ├── components/                  # ui/, booking/, analytics/, effects/, portfolio/, …
@@ -289,8 +295,9 @@ NailsByGabs/
 │   ├── middleware.ts                # Supabase session refresh only (no route guards)
 │   └── types/
 ├── supabase/
-│   ├── migrations/                  # 001–014 SQL (manual apply in production)
+│   ├── migrations/                  # 001–016 SQL (manual apply in production)
 │   ├── config.toml                  # Local Supabase (CLI) settings
+│   ├── data/                        # Idempotent production data imports
 │   └── email-templates/             # Supabase auth email HTML (pasted into dashboard)
 ├── vercel.json                      # Daily cron
 └── .env.example
@@ -302,16 +309,16 @@ NailsByGabs/
 
 ### Layout shell
 
-`src/app/layout.tsx` loads session + theme in parallel, sets `data-theme` on `<html>`, wraps in `SidebarProvider` (`defaultOpen={false}`), renders `AppSidebar` + `MobileBottomNav`.
+`src/app/layout.tsx` loads session + theme in parallel, sets `data-theme` on `<html>`, and renders `DesktopNav`, seasonal effect layers, the page scroll region, and `MobileBottomNav`. On mobile, only `.app-scroll-region` scrolls so the bottom navigation remains pinned in in-app browsers; desktop uses normal window scrolling.
 
 ### Responsive navigation (owner-refined)
 
 | Viewport | Navigation |
 |----------|------------|
 | Desktop | One **top bar pinned while scrolling** (`components/desktop-nav.tsx`, rendered in the root layout): NailsByGabs name, labeled page tabs (active = pill), divider + owner tabs, social icons, Sign in/out. No sidebar |
-| Mobile | Pill bottom nav with sliding indicator; sidebar hidden |
+| Mobile | Pinned pill bottom nav with sliding indicator |
 
-The desktop pattern went through **three iterations** in one conversation arc: clickable peek tab → full-height hover strip → top chevron tab with bump-out. The final version balances portfolio content space against discoverability.
+The desktop pattern went through **five iterations**: clickable peek tab → full-height hover strip → top chevron tab → tall `MENU` tab → pinned top bar. The final version keeps every destination visible without covering portfolio content.
 
 ### Theming
 
@@ -327,9 +334,9 @@ How it works:
 - **Writing:** `set_site_theme(p_theme, p_revert_at, p_revert_to)` (security definer, owner-only) validates and stores the theme and the `theme_revert_at` / `theme_revert_to` keys atomically.
 - **Switching back:** there is no cron. `getThemeState()` notices a due switch-back while rendering and calls `apply_due_theme_revert()`, which is safe for anonymous callers because it only acts once the time has passed. The switch therefore happens on the first page view after the scheduled time.
 
-- **Theme ids:** `cherry-studio` (default), `pearl`, and `flower` are defined in `src/lib/themes.ts`. Each one has a `[data-theme="…"]` token block in `globals.css`, and those tokens are mapped into Tailwind through `@theme inline`.
+- **Theme ids:** `cherry-studio` (default), `pearl`, `flower`, and seasonal `halloween` are defined in `src/lib/themes.ts`. Each one has a `[data-theme="…"]` token block in `globals.css`, and those tokens are mapped into Tailwind through `@theme inline`.
 - **Visitor read path:** the public reads only the `active_theme` key, via the "Anyone can read active theme" RLS policy. All other `app_config` keys are owner-only since migration 013.
-- **No dark mode.** The site has only the owner-selected light themes. The unused Tailwind `dark` custom variant and the few `dark:` classes were removed on 2026-10-24.
+- **No OS-driven dark mode.** The unused Tailwind `dark` variant and `dark:` classes were removed on 2026-10-24. Halloween is intentionally dark only when the owner activates that site theme.
 - **Every color comes from theme tokens; nothing is hardcoded.** For example, the mobile header shadow (`.site-header-shadow`) is derived from `--accent`.
 
 ### Analytics chart UI (owner-specified behavior)
@@ -420,7 +427,7 @@ Owner OAuth stores refresh token. Every slot mutation syncs create/update/delete
 
 ## 11. Database Design & Evolution
 
-Migrations **001–015** are applied manually in Supabase SQL Editor—no CI migration runner. Locally, `npx supabase start` / `npx supabase migration up` apply them automatically.
+Migrations **001–016** are applied manually in Supabase SQL Editor—no CI migration runner. Locally, `npx supabase start` applies them automatically. Production migrations 014–016 and the 40-row photo metadata export were confirmed applied without error on 2026-10-27.
 
 | # | Owner-relevant change |
 |---|----------------------|
@@ -434,6 +441,9 @@ Migrations **001–015** are applied manually in Supabase SQL Editor—no CI mig
 | 013 | **Restrict client reads**: own profile/bookings only, `get_taken_slots()`, owner-only `app_config`, revoke internal RPCs |
 | 014 | **Seasonal themes**: `halloween` allowed, `is_site_theme()`, `set_site_theme()`, `apply_due_theme_revert()`, public read of the revert schedule |
 | 015 | **Portfolio photos**: owner-editable gallery metadata (tags, title, featured, sort order, needs_review); rows only for edited photos |
+| 016 | **Rename gallery tag**: replaces `Fun` with `Design` in saved metadata and updates the tag constraint |
+
+The production photo import is `supabase/data/portfolio_photos_2026-10-27.sql`. It idempotently upserts the owner's 40 reviewed rows after migrations 015 and 016.
 
 ### Analytics event types
 
@@ -575,7 +585,7 @@ The review found these gaps; they are **not yet fixed**. Track fixes in `AGENTS.
 
 ### Operational checklist
 
-1. Apply migrations 001–015 in Supabase SQL Editor (014 before selecting Halloween; 015 before editing on /photos. Without them the site falls back safely) (009 then 011 back-to-back before live traffic if analytics is new). After 013, check the `pg_policies` query at the end of that file: any leftover `using (true)` read policy created in the dashboard undoes the restriction
+1. Keep production migrations synchronized manually. Migrations 001–016 are applied; 014–016 and `supabase/data/portfolio_photos_2026-10-27.sql` were confirmed successful on 2026-10-27. For a fresh environment, run migrations in order, then the photo export after 016. After 013, check the `pg_policies` query at the end of that file: any leftover `using (true)` read policy created in the dashboard undoes the restriction
 2. Set real `owner_email` in `app_config`
 3. Configure Vercel env vars (see `.env.example`)
 4. Connect Google Calendar from owner account on `/book`
@@ -590,7 +600,7 @@ The review found these gaps; they are **not yet fixed**. Track fixes in `AGENTS.
 There is no automated test suite. Verify changes with `npm run lint` (ESLint CLI, `eslint.config.mjs`), `npm run typecheck`, and `npm run build`, then check manually in `npm run dev`:
 
 - **Roles:** signed out, client, owner
-- **Themes:** all three
+- **Themes:** all four, including Halloween effects and scheduled switch-back
 - **Widths:** mobile and desktop
 - **Browsers:** ideally Instagram's in-app browser, which is where most visitors arrive
 
@@ -642,11 +652,15 @@ This section ties **specific features** to **specific problems** encountered dur
 
 **Solution:** Add filenames to `PORTFOLIO_FILE_NAMES` (URL-encoded for spaces).
 
-**Current state (2026-10-27):** the registry has two kinds of entries. `LABELED_SETS` has explicit tags, title and crop point per file, for camera names like `IMG_1234` that can't be parsed; the 40 sets added on 2026-10-27 are tagged as drafts pending the owner's review. `PORTFOLIO_FILE_NAMES` holds the older filename-tagged photos. A `Seasonal` filter tab was added for holiday sets. The photoshoot images are not used on the site.
+**Current state (2026-10-27):** the registry has two kinds of entries. `LABELED_SETS` has explicit defaults and crop points for camera names like `IMG_1234`; `PORTFOLIO_FILE_NAMES` holds the older filename-tagged photos. The owner's review of the 40 new sets was exported and applied to production, so saved `portfolio_photos` rows now override those defaults. A `Seasonal` filter tab handles holiday sets. The photoshoot images are intentionally unused.
 
 **Lesson:** Static asset galleries need an explicit registry step—upload alone isn't enough.
 
-**Image weight:** resolved on 2026-10-27. All 81 gallery photos are WebP produced by the optimizer: 238 MB of originals became 9.4 MB. Originals live in the git-ignored `image-originals/` folder (`portfolio/`, `about/`, `photoshoot/`, `retired/`, `review/`). The old JPEGs remain in git history.
+**Image weight:** resolved on 2026-10-27. All 81 gallery photos are WebP produced by the optimizer: 238 MB of originals became 9.4 MB. Originals live in the git-ignored `image-originals/` folder (`portfolio/`, `about/`, `branding/`, `photoshoot/`, `retired/`, `review/`). The old JPEGs remain in git history.
+
+**About portrait (deliberate exception to the 2000px pipeline).** The source is `image-originals/about/NailsByGabsAbout.JPEG` (6000×4000, sRGB). It is published at **full resolution** as `public/about/NailsByGabsAbout.webp`: q92, metadata stripped, 2.3 MB. `next/image` serves each visitor a resized copy, so the full file is only the optimizer's source.
+
+The 2000px version blurred because the About card is a crop: `object-cover` must fill the card's height, so the image needs more width than the card itself. The fix is a 4:3 card (`className="aspect-[4/3]"`, `imagePosition="52% 50%"`) with `sizes="(min-width: 1024px) 55vw, 105vw"` and `quality={90}`, set through `ProfileCard`'s `sizes`/`quality` props. Measured: a 1920w file is picked at 0.78× (desktop @2x) and 0.63× (iPhone @3x) device px per image px, so nothing is upscaled. The cropped logo was reduced from 281 KB to a metadata-free 90 KB palette PNG; the square compatibility icon is 67 KB and metadata-free.
 
 Pipeline: `npm run images:optimize -- image-originals/portfolio --out public/portfolio` (`scripts/optimize-images.mjs`). It applies EXIF rotation, resizes the long edge to 2000px, writes WebP at quality 80, and strips metadata, including any GPS location.
 
@@ -658,7 +672,7 @@ Pipeline: `npm run images:optimize -- image-originals/portfolio --out public/por
 
 **Problem:** Display logic stripped digits from tags, turning **"3D"** into **"D"**.
 
-**Owner clarification:** Remove numbers from suffixes (`Fun3` → `Fun`) but never from the `3D` token.
+**Owner clarification:** Remove numeric suffixes from legacy filenames (`Fun3` → `Design`) but never remove the `3` from the `3D` token. Legacy filenames remain unchanged while their public tag/title uses `Design`.
 
 **Solution:** Parser rules for `W` = "with", comma vs ampersand joining, and protected `3D` literal.
 
@@ -736,7 +750,7 @@ Pipeline: `npm run images:optimize -- image-originals/portfolio --out public/por
 | Tall labeled "MENU" tab | Hover or click; click-outside/Esc close | Replaced: felt big and overlapped content |
 | **Top tab bar** (no sidebar) | Labeled tabs always visible, pinned on scroll, mirrors the mobile bottom bar | **Shipped (2026-10-27)** |
 
-**Implementation:** Removed `SidebarTrigger` from desktop header; deleted peek tab component; added `sidebar-hover-tab` with `ChevronLeft`; panel opens on mouse enter, closes on leave.
+**Final implementation:** `DesktopNav` is rendered by the root layout and remains sticky at the top. It shares `PUBLIC_NAV` and `OWNER_NAV` with the mobile bar through `src/lib/nav.ts`. The old sidebar, hover tab, sheet, tooltip, separator, skeleton, and `use-mobile` files were deleted.
 
 ---
 
@@ -799,7 +813,7 @@ Pipeline: `npm run images:optimize -- image-originals/portfolio --out public/por
 | No ORM | RLS-first SQL in repo | Manual types; migration discipline required |
 | Daily cron on Hobby | Free tier | Approximate reminder timing |
 | Static portfolio registry | Fast CDN, simple code | Deploy required to add photos |
-| Hover-only desktop nav | More gallery space | Less obvious to first-time visitors |
+| Persistent desktop top nav | Every destination is visible and pinned | Uses horizontal space on narrower desktops |
 | Event-sourced analytics | Accurate history, splits | Service role required; backfill complexity |
 | Two email providers | Right tool per job (auth vs transactional) | Two DNS/config surfaces |
 
@@ -813,7 +827,7 @@ Confirmed with owner—not a backlog oversight:
 - Square / booking SaaS
 - Client `/account` portal (discussed as future; not built)
 - SMS reminders
-- Admin gallery CMS
+- Gallery file uploads or a full binary-asset CMS (metadata editing exists at `/photos`)
 - Reviews/testimonials module
 - Multi-staff scheduling
 
@@ -827,11 +841,13 @@ Discussed in conversation as next steps **without payment**:
 2. Client "My Appointments" view
 3. Service selection at booking time
 4. SEO (sitemap, robots, JSON-LD)
-5. Client cancellation confirmation email
+5. ~~Client cancellation confirmation email~~ — **shipped**
 6. Owner settings UI for notification email and revenue default
-7. Wire staged portfolio photos into registry (needs tag-style names)
+7. ~~Wire staged portfolio photos into registry and production metadata~~ — **shipped 2026-10-27**
 8. Close the security gaps in [Section 15](#15-security-model) (S1–S9)
 9. ~~Portfolio image optimization pipeline~~: **done 2026-10-27**
+10. Loyalty membership and client-visible progress (rules still require owner answers; see `AGENTS.md`)
+11. ~~Apply the supplied logo to browser icons and social share cards~~ — **shipped 2026-10-27**; desktop navigation intentionally remains text
 
 ### Architecture follow-ups (2026-10-24 review)
 
@@ -844,8 +860,10 @@ Resolved on 2026-10-24:
 
 Still open:
 - **Every route is dynamic.** The root layout reads the session, so even the portfolio and services pages render per request. Moving the auth-dependent nav bits to a client island, or using partial prerendering once it is stable, would let the public pages be static and CDN-cached.
-- **Copy is scattered.** Content lives in `lib/data.ts`, `lib/site-metadata.ts`, the hero component, and inline page JSX. Gathering marketing copy into one module would make the content overhaul easier.
-- **Local development database.** There is no local Supabase setup yet. The Supabase CLI and Docker would apply `supabase/migrations/` automatically.
+- **Copy is scattered.** Content lives in `lib/data.ts`, `lib/site-metadata.ts`, and inline page JSX. Gathering marketing copy into one module would make future content updates easier.
+
+Resolved on 2026-10-27:
+- Local Supabase now runs through the CLI and Docker with `supabase/config.toml`; `npx supabase start` applies the migrations and Mailpit captures local email.
 
 ---
 
@@ -853,7 +871,7 @@ Still open:
 
 | Concern | Files |
 |---------|-------|
-| Layout & sidebar | `src/app/layout.tsx`, `src/components/ui/sidebar.tsx`, `src/app/globals.css` |
+| Layout & navigation | `src/app/layout.tsx`, `src/components/desktop-nav.tsx`, `src/components/mobile-bottom-nav.tsx`, `src/app/globals.css` |
 | Booking | `src/app/book/actions.ts`, `src/components/booking/*` |
 | Timezone | `src/lib/business-timezone.ts`, `src/lib/dates.ts` |
 | Portfolio parsing | `src/lib/portfolio.ts` |
@@ -862,12 +880,13 @@ Still open:
 | Cron | `vercel.json`, `src/app/api/cron/appointment-lifecycle/route.ts` |
 | Notifications | `src/lib/notifications.ts` |
 | Google sync | `src/lib/google-calendar.ts`, `src/app/api/google/*` |
-| Migrations | `supabase/migrations/001` … `015` |
+| Migrations | `supabase/migrations/001` … `016` |
 | Navigation | `src/lib/nav.ts`, `src/components/desktop-nav.tsx`, `src/components/mobile-bottom-nav.tsx` |
 | Gallery data & editor | `src/lib/portfolio.ts` (defaults), `src/lib/portfolio-photos.ts` (DB merge), `src/app/photos/*`, `src/components/photos/photo-manager.tsx` |
 | Seasonal theme | `src/lib/theme.ts`, `src/app/settings/actions.ts`, `src/components/settings/theme-picker.tsx`, `src/components/effects/halloween.tsx`, migration 014 |
 | RLS read model | `supabase/migrations/013_restrict_client_reads.sql`, `src/app/book/page.tsx` |
 | Theming | `src/app/globals.css`, `src/lib/themes.ts`, `src/lib/theme.ts`, `src/components/settings/theme-picker.tsx` |
+| Branding & share images | `public/branding/`, `src/app/layout.tsx`, `src/app/opengraph-image.tsx`, `src/app/twitter-image.tsx` |
 | Agent change log | `AGENTS.md` |
 
 ---
@@ -881,8 +900,11 @@ Still open:
 | Chart zero-fill + daily line | Honest 1-month trend |
 | Chart axes & responsive sizing | Readable Y/X axes |
 | Remove "Today" + zero-copy | Cleaner chart labels |
-| Hover-only sidebar | No desktop click toggle |
-| Top chevron hover tab | Final sidebar UX |
+| Hover-only sidebar | Historical navigation iteration |
+| Top chevron hover tab | Historical navigation iteration |
+| Sticky desktop top bar | Final desktop navigation UX |
+| Owner Photos tool | Review tags/titles, carousel picks, ordering |
+| Seasonal Halloween theme | Scheduled switch-back, pumpkins, fog |
 | Analytics hover tooltips | 1m scrub with date + count |
 | 48h reminders | Client email ~2 days before |
 | Owner phone to env var | Phone no longer stored in source |
@@ -890,4 +912,4 @@ Still open:
 
 ---
 
-*This document reflects the NailsByGabs codebase through migration 015 (last updated 2026-10-27), incorporating product decisions and engineering challenges from the full development conversation—not only the final implementation state. Per-change history from that point on lives in `AGENTS.md`.*
+*This document reflects the NailsByGabs codebase through migration 016, the production photo metadata import, and the optimized 2026-10-27 branding/About assets (reviewed by Codex 1 at 16:23 EDT). Per-change history lives in `AGENTS.md`.*

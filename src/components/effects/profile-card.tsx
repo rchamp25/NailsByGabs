@@ -12,6 +12,15 @@ type ProfileCardProps = {
   imageAlt: string;
   /** CSS object-position for the crop, e.g. to keep a face in frame. */
   imagePosition?: string;
+  /**
+   * next/image `sizes`. With object-cover the photo must also cover the card's
+   * height, so for a landscape photo in a taller card this is wider than the
+   * card itself (otherwise the browser downloads too small a file and it blurs).
+   */
+  sizes?: string;
+  /** next/image quality (1-100); the default 75 is fine for thumbnails. */
+  quality?: number;
+  /** Extra classes; an aspect-* class here replaces the default 4:5 card shape. */
   className?: string;
 };
 
@@ -21,6 +30,8 @@ export function ProfileCard({
   imageSrc,
   imageAlt,
   imagePosition = "50% 50%",
+  sizes = "(max-width: 1024px) 100vw, 480px",
+  quality,
   className,
 }: ProfileCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -35,8 +46,6 @@ export function ProfileCard({
 
     card.style.setProperty("--tilt-x", `${y * -10}deg`);
     card.style.setProperty("--tilt-y", `${x * 10}deg`);
-    card.style.setProperty("--glare-x", `${(x + 0.5) * 100}%`);
-    card.style.setProperty("--glare-y", `${(y + 0.5) * 100}%`);
   }
 
   function resetTilt() {
@@ -44,8 +53,6 @@ export function ProfileCard({
     if (!card) return;
     card.style.setProperty("--tilt-x", "0deg");
     card.style.setProperty("--tilt-y", "0deg");
-    card.style.setProperty("--glare-x", "50%");
-    card.style.setProperty("--glare-y", "35%");
   }
 
   return (
@@ -59,12 +66,12 @@ export function ProfileCard({
         src={imageSrc}
         alt={imageAlt}
         fill
-        sizes="(max-width: 1024px) 100vw, 480px"
+        sizes={sizes}
+        quality={quality}
         className="object-cover"
         style={{ objectPosition: imagePosition }}
         priority
       />
-      <div className="profile-card-glare pointer-events-none absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-5">
         <p className="font-serif text-2xl text-white">{name}</p>
         <p className="text-sm text-white/80">{subtitle}</p>

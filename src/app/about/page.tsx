@@ -20,10 +20,14 @@ export default function AboutPage() {
             <ProfileCard
               name="Gabrielle"
               subtitle="GelX nails · Rochester & Binghamton"
-              imageSrc="/about/NailsByGabsAboutPhoto.webp"
+              imageSrc="/about/NailsByGabsAbout.webp"
               imageAlt="Gabs smiling, holding a nail polish brush and bottle"
-              imagePosition="47% 35%"
-              className="max-h-[520px] lg:max-h-none"
+              imagePosition="52% 50%"
+              // 4:3 card on a 3:2 photo: the image must be ~1.125x the card width
+              // to cover its height (card is ~full width on mobile, ~half on lg+).
+              sizes="(min-width: 1024px) 55vw, 105vw"
+              quality={90}
+              className="aspect-[4/3]"
             />
           </ScrollReveal>
 

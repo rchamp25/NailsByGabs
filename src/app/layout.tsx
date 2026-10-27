@@ -45,9 +45,9 @@ export const metadata: Metadata = {
   openGraph: defaultOpenGraph,
   twitter: defaultTwitter,
   icons: {
-    icon: "/branding/Nails%20by%20Gabs.png",
-    shortcut: "/branding/Nails%20by%20Gabs.png",
-    apple: "/branding/Nails%20by%20Gabs.png",
+    icon: "/branding/NailsByGabsIcon.png",
+    shortcut: "/branding/NailsByGabsIcon.png",
+    apple: "/branding/NailsByGabsIcon.png",
   },
 };
 

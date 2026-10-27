@@ -350,14 +350,6 @@
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   box-shadow: 0 24px 60px -28px color-mix(in srgb, var(--primary) 35%, transparent);
 }
-.profile-card-glare {
-  background: radial-gradient(
-    320px circle at var(--glare-x, 50%) var(--glare-y, 35%),
-    rgb(255 255 255 / 0.28),
-    transparent 45%
-  );
-}
-
 .slot-location-webster {
   background-color: var(--slot-webster-bg);
   border-color: var(--slot-webster-border);

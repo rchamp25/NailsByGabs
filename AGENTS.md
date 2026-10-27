@@ -49,6 +49,7 @@ Write it so another agent with no context can continue your work without reading
 | Agent | First active | Focus |
 |-------|--------------|-------|
 | Claude 1 | 2026-10-24 | Codebase review; created this file |
+| Codex 1 | 2026-10-27 | Architecture reconciliation; production-state documentation |
 
 ### 1.5 House rules
 
@@ -83,7 +84,7 @@ Write it so another agent with no context can continue your work without reading
 
 ---
 
-## 2. Orientation (current as of 2026-10-24)
+## 2. Orientation (current as of 2026-10-27)
 
 ### 2.1 What the product is
 
@@ -127,12 +128,12 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, and a non-blocking 
 | Effects library | `src/components/effects/`: `profile-card` (About; takes `imagePosition`), `scroll-reveal` (everywhere), `halloween`. The hero-only effects (blur-text, rotating-text, silk-background, star-border) were deleted with the hero on 2026-10-27 |
 | Portfolio | Photo list and **default** metadata in `src/lib/portfolio.ts` (`LABELED_SETS` with explicit tags, and `PORTFOLIO_FILE_NAMES` with tags parsed from filenames, combined into `PORTFOLIO_PHOTO_DEFAULTS`). The owner's edits live in the `portfolio_photos` table (migration 015) and are merged by `getManagedPhotos()` / `getPortfolioView()` in `src/lib/portfolio-photos.ts`, which falls back to the defaults if the table is missing. Owner editor: **`/photos`** (`components/photos/photo-manager.tsx`, `app/photos/actions.ts`) for tags, title, review status, carousel pick, and order. Public UI in `components/portfolio/`: carousel (click or tap opens `PortfolioLightbox`), showcase (clicking the active tag returns to All), and the shared lightbox |
 | Photo crop points | `focal` in `LABELED_SETS`, or `focalByFileName` for filename-tagged photos, used as CSS `object-position`. Each value is the center of the nail art as a percentage of the EXIF-rotated image. Fallback: `DEFAULT_FOCAL` (`50% 58%`) |
-| Image pipeline | **Originals live in git-ignored `image-originals/`**: `portfolio/` (81), `about/`, `photoshoot/` (unused Gabby Nails shoot), `retired/` (old headshot), and `review/` (tag review sheets for the owner). Web copies in `public/` are WebP from `npm run images:optimize -- image-originals/portfolio --out public/portfolio` (EXIF-rotate, long edge 2000px, q80, metadata stripped). 238 MB became 9.4 MB on 2026-10-27 |
+| Image pipeline | **Originals live in git-ignored `image-originals/`**: `portfolio/` (81), `about/`, `branding/`, `photoshoot/` (unused Gabby Nails shoot), `retired/` (old headshot), and `review/` (tag review sheets for the owner). Web copies use the Sharp optimizer (EXIF-rotate, long edge 2000px, q80 WebP, metadata stripped). Gallery originals fell from 238 MB to 9.4 MB; the new About photo fell from 2.9 MB to 62 KB. The OG logo stays an optimized palette PNG because Next `ImageResponse` rejected an embedded WebP data URI |
 | Home-page extras | `components/social-links.tsx` (Instagram/TikTok icon links, passed to `SiteHeader` through its `actions` prop) and `components/book-cta-bar.tsx` (sticky Book button; read its comment before moving it) |
 | Email colors | Booking emails in `lib/notifications.ts` use `THEME_CATALOG[n].email` from `lib/themes.ts` for the active theme. **When you change theme colors in `globals.css`, update the matching `email` palette.** Supabase auth templates in `supabase/email-templates/` are static HTML pasted into the Supabase dashboard and still use the old red (`#c62828`) |
 | Owner authorization | `lib/auth.ts`: `requireOwner(redirectTo)` for pages and routes (redirects), `getOwnerSession()` for Server Actions (returns null). `getSessionProfile()` is cached per request with React `cache()` |
 | Copy/content | `src/lib/data.ts` (About bio, location, socials) and `src/lib/site-metadata.ts` (site name, tagline, description, OG). Services/prices come **from the DB** (`service_categories`, `service_items`) and are owner-editable on `/services` |
-| Brand assets | `public/branding/Nails by Gabs.png` (favicon/icon; **new logo pending from the owner**), `public/about/NailsByGabsAboutPhoto.webp` (About photo, `imagePosition="47% 35%"`), OG images generated in `src/app/opengraph-image.tsx` / `twitter-image.tsx` |
+| Brand assets | Raw logo source: git-ignored `image-originals/branding/source/NailsByGabsLogoSource.png`. Public `NailsByGabsLogo.png` is a cropped metadata-free palette PNG for OG/Twitter; `NailsByGabsIcon.png` is the metadata-free square favicon/shortcut/Apple icon. Desktop nav intentionally keeps the text wordmark. About photo: full-resolution `public/about/NailsByGabsAbout.webp` (6000×4000, q92, metadata stripped; original `image-originals/about/NailsByGabsAbout.JPEG`). It is shown in a 4:3 `ProfileCard` with `sizes="(min-width: 1024px) 55vw, 105vw"` and `quality={90}`. **When an image is cropped by `object-cover`, set `sizes` for the width needed to cover the card's height, not the card's width**, or it will be upscaled and blurry |
 
 ### 2.4 Constraints the owner has already confirmed (do not undo without asking)
 
@@ -140,15 +141,17 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, and a non-blocking 
 - All times are Eastern (`src/lib/business-timezone.ts`). Never treat `datetime-local` as UTC.
 - Portfolio title rules: `W` means "with" (`3DWFun` → "3D & Fun"); three or more tags are comma-joined; numeric suffixes are stripped but **`3D` is preserved**; the lightbox shows descriptors, never raw filenames.
 - Branding tagline is **"GelX Nails"**.
-- Desktop sidebar is hover-only, with no header toggle.
+- Desktop navigation is the pinned top tab bar; the old sidebar was deleted.
 - Analytics chart behavior (zero-filled buckets, integer Y axis, no "· Today" label, 1-month hover tooltip) is owner-specified.
 - Locations are **Webster** and **Binghamton**. Binghamton bookings require a client acknowledgement.
 
-### 2.5 Known state and gotchas (verified 2026-10-24)
+### 2.5 Known state and gotchas (verified through 2026-10-27)
 
-- **The architecture doc runs through migration 012, but migration 013 exists.** `013_restrict_client_reads.sql` (commit `4578c0b`) limits clients to their own profile, open slots, and their own bookings. Other clients' bookings now arrive only as times through `get_taken_slots()`. UI that shows booked slots to clients must not expect names or notes.
+- **Production and repository state (confirmed 2026-10-27 15:57 EDT):** commit `15a0180` has been pushed, local tracked files represent the GitHub repository, and production migrations 014 → 015 → 016 plus `supabase/data/portfolio_photos_2026-10-27.sql` ran without error. The export installed all 40 reviewed photo metadata rows.
+
+- **Architecture documentation is synchronized through migration 016.** Migration 013 (`013_restrict_client_reads.sql`, commit `4578c0b`) limits clients to their own profile, open slots, and their own bookings. Other clients' bookings arrive only as times through `get_taken_slots()`. UI that shows booked slots to clients must not expect names or notes.
 - **Owner phone moved to env.** `NEXT_PUBLIC_OWNER_PHONE` (commit `1d8d878`). The About page hides the phone link when the variable is unset.
-- **Gallery photo tags are drafts until Gabs confirms them on `/photos`.** The 40 `IMG_*` sets start as "Needs review" (`needsReview: true` in `PORTFOLIO_PHOTO_DEFAULTS`); confirming or saving writes a `portfolio_photos` row with `needs_review=false`. The DB is the source of truth for edits, so **don't "fix" tags in `LABELED_SETS` for photos she has already saved**: the DB row overrides them. New photos added to the code later automatically show up as Needs review.
+- **The 40 delivered gallery sets are reviewed and live in production metadata.** Their `portfolio_photos` rows have `needs_review=false` and override code defaults. Do not "fix" their tags in `LABELED_SETS`; the DB remains the source of truth. Newly registered photos without saved rows still default to Needs review.
 - **Photo shoot images** (`image-originals/photoshoot/Gabby Nails-*.JPEG`) are intentionally unused for now. Seven of them were previously `git add`ed under `public/portfolio/`, so the user needs to unstage them (`git rm --cached`).
 - **No dark mode:** the unused `dark` variant was removed on 2026-10-24. Tailwind v4's default `dark:` variant follows the OS setting, so do not add `dark:` classes.
 - **Security backlog:** `docs/PROJECT_ARCHITECTURE.md` §15 lists open gaps S1–S9. S1 (`npm audit`: 1 critical, 4 high) is the most urgent. Email HTML escaping from S2 is done, but length caps are still missing. Log fixes here by S-number.
@@ -165,7 +168,7 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, and a non-blocking 
 Local Supabase runs in Docker through the Supabase CLI (`npx supabase`). The CLI is not a project dependency, and there is no seed file yet.
 
 1. Start **Docker Desktop**. It does not start with Windows unless the user enables that.
-2. Run `npx supabase start` from the repo root. It applies `supabase/migrations/001–013` automatically. All 13 apply cleanly to a fresh database.
+2. Run `npx supabase start` from the repo root. It applies `supabase/migrations/001–016` automatically. All 16 apply cleanly to a fresh database.
 3. Run `npm run dev` and open http://localhost:3000.
 4. Stop everything with `npx supabase stop`. Data persists between runs. To rebuild the database from migrations, run `npx supabase db reset`.
 
@@ -206,8 +209,8 @@ The user is meeting Gabs on 2026-10-25. Expected inputs and what each one touche
 
 | Item | What to collect | Where it lands |
 |------|-----------------|----------------|
-| **Rebrand / new logos** | Logo as SVG (or transparent PNG of at least 1024px), a square mark for the favicon/app icon, brand colors as hex, and fonts if they change | `public/branding/`, `layout.tsx` `metadata.icons` (currently `Nails by Gabs.png`), `opengraph-image.tsx` / `twitter-image.tsx`, `app-sidebar.tsx` wordmark, theme tokens in `globals.css` + `themes.ts` (including the `email` palette), `supabase/email-templates/*.html` |
-| **New photos** | **Delivered 2026-10-27**: 40 nail sets plus the About photo, added and optimized. Still needed: Gabs confirms the drafted tags | `LABELED_SETS` in `src/lib/portfolio.ts` |
+| **Rebrand / new logos** | **Logo delivered and integrated 2026-10-27:** supplied pink PNG is active for browser icons and Instagram/iMessage-compatible share previews. Desktop nav remains text by owner request. Brand colors/fonts and static Supabase email-template restyling remain separate future inputs if desired | `public/branding/`, `layout.tsx` metadata icons, `opengraph-image.tsx` / `twitter-image.tsx` |
+| **New photos** | **Completed 2026-10-27**: 40 nail sets plus the About photo were added and optimized; Gabs's reviewed metadata was exported and applied in production | Defaults in `src/lib/portfolio.ts`; production overrides in `portfolio_photos` |
 | **Bio (maybe)** | Final text | `src/lib/data.ts` (`aboutContent.bio`) |
 | **Loyalty program** (new feature, visible to clients) | Rules: reward and threshold (e.g. every Nth completed appointment), whether manual/offline bookings count, how rewards are redeemed and marked used, expiry, where clients see progress | See design notes below |
 
@@ -243,6 +246,257 @@ The user is meeting Gabs on 2026-10-25. Expected inputs and what each one touche
 ## 3. Log
 
 <!-- Newest entries first. Use the template in §1.6. -->
+
+### [Claude 1] — 2026-10-27 16:40 EDT — Local environment shut down (data preserved)
+
+**Commits:** none; no project files changed apart from this entry.
+
+**What was done:**
+1. Recorded a database snapshot: `users=2 slots=1 photo_rows=40 services=14 events=10 theme=halloween`.
+2. Stopped the dev server on :3000 (PID 18996, a node process left running by Codex 1).
+3. Ran `npx supabase stop` **without `--no-backup`**. The result reported `"backup": true`, 0 containers remained, and the `supabase_db_NailsByGabs`, `supabase_storage_NailsByGabs`, and `supabase_edge_runtime_NailsByGabs` volumes were kept.
+4. Quit Docker Desktop and ran `wsl --shutdown`; the `docker-desktop` distro shows Stopped.
+
+**To resume:** start Docker Desktop, run `npx supabase start`, then `npm run dev`. Re-run the snapshot query and compare it with the counts above to confirm persistence. Never use `npx supabase stop --no-backup` or `npx supabase db reset` without the user's go-ahead, because both wipe local data, including the owner's 40 reviewed photo rows.
+
+### [Claude 1] — 2026-10-27 16:36 EDT — About photo: blur fixed, zoomed out to 4:3, full-resolution metadata-stripped source
+
+**Commits:** uncommitted (the user handles source control)
+**Files touched:**
+- `src/components/effects/profile-card.tsx` (new optional `sizes` and `quality` props)
+- `src/app/about/page.tsx`
+- New: `public/about/NailsByGabsAbout.webp`; removed `public/about/NailsByGabsNewAbout.webp` (Codex's 2000px copy, never committed)
+- Original renamed in the ignored folder: `image-originals/about/NailsByGabsNewAbout.JPEG` → `NailsByGabsAbout.JPEG`
+- Docs: `docs/PROJECT_ARCHITECTURE.md`, `AGENTS.md` (§2.3 Brand assets row)
+
+**Technical explanation**
+
+*Problem.* The user saw an "extreme quality drop" on the About photo and asked to recrop, zoom out, and use a full-resolution metadata-stripped image.
+
+*Root cause* (measured from the rendered `srcset`):
+- `ProfileCard` hard-coded `sizes="(max-width: 1024px) 100vw, 480px"`, but the card was a 4:5 portrait box cropping a 3:2 landscape photo with `object-cover`. The image must cover the card's **height**, so it needs about 1.9× the card's width, while `sizes` only described the width.
+- Browsers therefore fetched width-sized variants (1080w on desktop @2x, 1200w on iPhone @3x) and stretched them 2.3× and 1.7×.
+- The 2000px source capped quality further.
+
+*Fix:*
+- **Source:** `sharp(original).rotate().webp({ quality: 92, effort: 6, smartSubsample: true })` at the native 6000×4000, 2.3 MB. The source was already sRGB with no ICC profile, so stripping metadata cannot shift colors; EXIF, XMP, and IPTC are gone. This is a deliberate exception to the 2000px rule, because next/image only uses the file as an optimizer source and serves resized variants.
+- **Shape:** the card is 4:3 (the user chose it from rendered 4:5, 1:1, 4:3, and 3:2 previews), showing about 89% of the photo's width. That's the "zoom out", and the whole head is now visible on desktop. `imagePosition` stays at `52% 50%`. The old `max-h-[520px] lg:max-h-none` was removed because 4:3 is short enough everywhere.
+- **Size hint:** `sizes="(min-width: 1024px) 55vw, 105vw"`. The card is about 46vw on lg+ and ~92vw on mobile, ×1.125 to cover a 4:3 box with a 3:2 image.
+- **Quality:** `quality={90}`.
+- **`ProfileCard`:** its default `sizes` is unchanged, and `cn`/tailwind-merge lets `aspect-[4/3]` override the default `aspect-[4/5]`.
+
+**Verification**
+- Headless Chrome; stretch = device px per downloaded image px (≤1 is sharp):
+
+  | Viewport | Card | File picked | Stretch |
+  |----------|------|-------------|---------|
+  | Desktop 1440 @2x | 664×498 | 1920w q90 | **0.78×** |
+  | iPhone 15 @3x | 361×271 | 1920w q90 | **0.63×** |
+
+  Before: 2.3× and 1.7× upscaled. The first version of the measurement wrongly used `naturalWidth`, which is density-corrected for `srcset` images; it was corrected to the real width of the downloaded file.
+- Screenshots: full head, brush, bottle, and nails crisp on both. The face softness is the photo's own depth of field.
+- Image audit: About 1 web ↔ 1 original (names match); `NailsByGabsAbout.webp` has no metadata. Its "OVERSIZE" flag is the intended exception.
+- `npm run lint` and `npm run typecheck`: pass. No references to `NailsByGabsNewAbout` remain in `src`.
+
+**Open items / handoff**
+- If the gallery or carousel are ever shown in shapes other than their current tiles, apply the same `sizes` rule. Today they use portrait photos in portrait or square boxes, which aren't affected.
+
+### [Claude 1] — 2026-10-27 16:28 EDT — Review of Codex 1's work, then image-archive audit and tidy-up
+
+**Commits:** uncommitted. Only git-ignored files changed in this entry; the user still needs to commit Codex 1's changes.
+**Files touched:**
+- Moved `image-originals/about/NailsByGabsAboutPhoto.JPEG` → `image-originals/retired/`
+- Restored `image-originals/retired/Nails by Gabs (old logo).png` from `HEAD` (it had been deleted from `public/branding/`)
+
+**Technical explanation**
+
+*Review of Codex 1's five entries (15:57–16:23).* Reviewed read-only at the user's request. Diffs matched the log: architecture-doc reconciliation, single lightbox close (`DialogContent` `showCloseButton`), About glare removed, new logo icons and OG card, new About photo, assets optimized. Lint and typecheck pass; no references to deleted assets remain.
+
+During the review, the OG and Twitter routes reset the connection 3 out of 3 times while the logo was WebP (Satori can't decode WebP data URIs). Codex switched it to PNG at 16:22 and logged it; after that, both routes return a 1200×630 PNG.
+
+Follow-ups reported to the user (not changed):
+- 32px favicon of the wide wordmark is illegible; a square mark is needed.
+- On desktop, the About crop `52% 50%` cuts off the top of her head.
+- The new About photo has her face in soft focus (content call).
+- The OG card layout leaves a large gap below the logo.
+
+*Image audit* (script over every image outside `node_modules`/`.next`):
+- **Locations:** no images outside `public/` and `image-originals/`, and no raw JPEG/HEIC in `public/`.
+- **Portfolio:** 81 WebP ↔ 81 originals, a 1:1 match.
+- **Metadata:** all 84 public images have no EXIF, ICC, IPTC, or XMP, and none exceeds a 2000px long edge.
+- **References:** every file referenced in code exists. (`NailsByGabsLogo.png` is used through a `join(…)` path in `opengraph-image.tsx`.)
+- **Git:** `image-originals/` is ignored, with 0 tracked files.
+
+**Photoshoot accounting** (matched by byte size and timestamp):
+
+| File | Status |
+|------|--------|
+| Gabby Nails-07, 17, 25, 27, 29 | in `image-originals/photoshoot/` |
+| Gabby Nails-14 | renamed by the user to `NailsByGabsNewAbout.JPEG` (current About photo) |
+| Gabby Nails-16 | renamed to `NailsByGabsAboutPhoto.JPEG` (previous About photo; now in `retired/`) |
+
+**Archive layout now** (`image-originals/`, git-ignored):
+- `portfolio/` (81)
+- `about/NailsByGabsNewAbout.JPEG`
+- `branding/NailsByGabsLogo.png` (cropped working copy) and `branding/source/NailsByGabsLogoSource.png` (untouched supplied logo)
+- `photoshoot/` (5 unused)
+- `retired/`: `HeadshotGabrielle.jpeg`, `NailsByGabsAboutPhoto.JPEG`, `Nails by Gabs (old logo).png`
+- `review/` (tag review sheets)
+
+**Verification:** the audit was re-run after the moves. About is 1 web copy ↔ 1 original, portfolio 81 ↔ 81, all public images clean, and `git status -- image-originals` is empty.
+
+**Open items / handoff**
+- The user should commit Codex 1's work. Pending in `public/`: deletion of the old About WebP and the old logo PNG; new `NailsByGabsNewAbout.webp`, `NailsByGabsIcon.png`, `NailsByGabsLogo.png`.
+- The favicon, About crop, and OG layout follow-ups above are awaiting the user's go-ahead.
+
+### [Codex 1] — 2026-10-27 16:23 EDT — New About portrait and logo assets compressed with metadata removed
+
+**Commits:** uncommitted
+**Files touched:**
+- About: `src/app/about/page.tsx`, new `public/about/NailsByGabsNewAbout.webp`, removed `public/about/NailsByGabsAboutPhoto.webp`
+- Branding: optimized `public/branding/NailsByGabsLogo.png`, retained `public/branding/NailsByGabsIcon.png`, removed old `public/branding/Nails by Gabs.png`
+- Share image: `src/app/opengraph-image.tsx`
+- Raw originals (git-ignored): `image-originals/about/NailsByGabsNewAbout.JPEG`, `image-originals/branding/NailsByGabsLogo.png`, `image-originals/branding/source/NailsByGabsLogoSource.png`
+- Docs: `docs/PROJECT_ARCHITECTURE.md`, `AGENTS.md`
+
+**Technical explanation**
+
+The user clarified that the newly added `NailsByGabsNewAbout.JPEG` should replace the About portrait and asked to compress both it and the supplied logo while stripping metadata, following the existing Claude-created Sharp pipeline.
+
+- Moved the 6000×4000, 2.9 MB About JPEG from `public/about/` into git-ignored `image-originals/about/`.
+- Ran `npm.cmd run images:optimize -- image-originals/about --out public/about`. The pipeline EXIF-rotated, resized to a 2000px long edge, encoded WebP at quality 80, and stripped metadata. Output: `NailsByGabsNewAbout.webp`, 2000×1333, 62 KB (98% smaller).
+- Updated the About card to use the new WebP with `imagePosition="52% 50%"`, selected from a rendered 4:5 crop preview so Gabs, the brush, polish bottle, and nails remain visible.
+- Preserved the untouched 2000×2000 logo source under `image-originals/branding/source/` and the cropped working logo under `image-originals/branding/`.
+- The standard optimizer produced a 43 KB metadata-free logo WebP (85% smaller), but Next's live `opengraph-image` route returned an empty response when that WebP was embedded as a data URI. Replaced it with a palette-quantized, compression-level-9 PNG: 281 KB → 90 KB (69% smaller), metadata-free, and verified the 1200×630 social card renders again.
+- Kept `NailsByGabsIcon.png` as PNG for favicon/Apple compatibility; it was already generated by Sharp at 512×512, 67 KB, with no EXIF/ICC/IPTC/XMP.
+- Removed the obsolete public About WebP and old logo PNG. The prior assets remain recoverable from `image-originals/` or Git history.
+
+This entry corrects the 16:15 Codex 1 handoff: raw logo sources now live under `image-originals/`, not `public/branding/`, and the active OG wordmark is the optimized PNG described above.
+
+**Verification**
+- Metadata inspection (`sharp.metadata()`): About WebP, logo PNG, and icon PNG have no EXIF, ICC, IPTC, or XMP
+- Local `/about`: HTTP 200 and serves `NailsByGabsNewAbout.webp`
+- Visual: 4:5 About crop and final 1200×630 Open Graph card inspected
+- Local `opengraph-image`: HTTP image response restored after PNG compatibility fallback
+- `npm.cmd run lint`: pass
+- `npm.cmd run typecheck`: pass
+
+**Open items / handoff**
+- None.
+
+### [Codex 1] — 2026-10-27 16:15 EDT — New supplied logo integrated into icons and mobile link-share previews
+
+**Commits:** uncommitted
+**Files touched:**
+- Assets: `public/branding/NailsByGabsLogoSource.png`, `public/branding/NailsByGabsLogo.png`, `public/branding/NailsByGabsIcon.png`
+- Metadata/share UI: `src/app/layout.tsx`, `src/app/opengraph-image.tsx`
+- Docs: `docs/PROJECT_ARCHITECTURE.md`, `AGENTS.md`
+
+**Technical explanation**
+
+The user placed `NailByGabsNewLogo.png` in `public/portfolio/` and asked for it to become the active logo, prioritizing Instagram and iMessage link sharing on mobile. The source was moved out of the gallery into `public/branding/NailsByGabsLogoSource.png` and preserved unchanged.
+
+- Generated `NailsByGabsLogo.png` by trimming the source's large white margins and adding a small even white safe area. This derivative is embedded in the 1200×630 `opengraph-image` and re-exported by `twitter-image`, so Open Graph consumers such as iMessage and Instagram receive the new pink logo.
+- Generated `NailsByGabsIcon.png` as a 512×512 white-backed square derivative and wired it to the standard favicon, shortcut icon, and Apple touch icon metadata.
+- Reworked the generated share card around the supplied pink logo and retained the confirmed tagline `GelX Nails`.
+- A first pass placed the graphic in the desktop top-left navigation. The user immediately clarified that this location should remain the original text wordmark, so `DesktopNav` was restored before handoff. No runtime reference to the old `Nails by Gabs.png` remains.
+- The old logo file remains in `public/branding/` as an unused historical asset; it is not served by current metadata or share-image code.
+
+No database, theme palette, email template, route, prop, or environment contract changed.
+
+**Verification**
+- Visual inspection: source, cropped wordmark, square icon, and rendered 1200×630 Open Graph image checked
+- Local `/` metadata: `og:image` and `twitter:image` are 1200×630 PNGs with alt `Nails By Gabs pink wordmark logo`
+- Local `/` metadata: favicon, shortcut icon, and Apple touch icon all resolve to `/branding/NailsByGabsIcon.png`
+- Runtime search: no source-code references to `Nails by Gabs.png` remain
+- `npm.cmd run lint`: pass
+- `npm.cmd run typecheck`: pass
+
+**Open items / handoff**
+- Social platforms cache link previews. After deployment, use each platform's refresh/debug tooling or wait for cache expiry before judging an already-shared URL.
+- A future transparent/vector logo or dedicated square mark can replace the generated derivatives without changing the metadata architecture.
+
+### [Codex 1] — 2026-10-27 16:08 EDT — Removed cursor-following glare from About photo while preserving tilt
+
+**Commits:** uncommitted
+**Files touched:**
+- UI: `src/components/effects/profile-card.tsx`
+- Styles: `src/app/globals.css`
+- Shared memory: `AGENTS.md`
+
+**Technical explanation**
+
+The user asked to remove only the light circle that followed the cursor over Gabs's About photo while retaining the card's motion.
+
+- Removed the `.profile-card-glare` overlay element and its radial-gradient CSS.
+- Removed the now-unused `--glare-x` and `--glare-y` pointer updates and reset values.
+- Preserved the pointer handler, `--tilt-x` / `--tilt-y` variables, perspective transform, transition, border, shadow, mobile behavior, and reduced-motion behavior.
+
+No props, routes, database contracts, migrations, or environment variables changed.
+
+**Verification**
+- `npm.cmd run lint`: pass
+- `npm.cmd run typecheck`: pass
+- `rg`/source inspection: no `.profile-card-glare` or `--glare-*` references remain; tilt variables and transform remain
+
+**Open items / handoff**
+- None.
+
+### [Codex 1] — 2026-10-27 16:03 EDT — Removed duplicate portfolio lightbox close control
+
+**Commits:** uncommitted
+**Files touched:**
+- UI: `src/components/portfolio/portfolio-lightbox.tsx`, `src/components/ui/dialog.tsx`
+- Shared memory: `AGENTS.md`
+
+**Technical explanation**
+
+The portfolio lightbox displayed two X buttons because the shared `DialogContent` always injected a Radix close control and `PortfolioLightbox` rendered a second image-overlay close button.
+
+- Added an optional `showCloseButton` prop to `DialogContent`, defaulting to `true`, so every existing dialog retains its current close button unless it explicitly opts out.
+- Set `showCloseButton={false}` only for `PortfolioLightbox` and retained its higher-contrast overlay button.
+- Wrapped the remaining button in `DialogClose asChild`. Closing now uses Radix's native dialog lifecycle, which triggers the existing `onOpenChange` handler, clears the selected image, and preserves focus-management behavior.
+- The shared lightbox is used by both the featured carousel and gallery grid, so the fix applies to both entry points.
+
+No database, route, styling token, environment variable, or migration contract changed.
+
+**Verification**
+- `npm.cmd run lint`: pass
+- `npm.cmd run typecheck`: pass
+- Structural check: the lightbox disables the injected close control and renders one `DialogClose`-backed button labeled `Close preview`
+- Initial `npm run lint` attempt did not execute because PowerShell blocks `npm.ps1`; rerunning through `npm.cmd` succeeded
+
+**Open items / handoff**
+- None.
+
+### [Codex 1] — 2026-10-27 15:57 EDT — Architecture reconciled with pushed code and confirmed production migrations/photo data
+
+**Commits:** uncommitted documentation update; describes pushed commit `15a0180`
+**Files touched:**
+- Docs: `docs/PROJECT_ARCHITECTURE.md`
+- Shared memory: `AGENTS.md`
+
+**Technical explanation**
+
+The user confirmed that commit `15a0180` was pushed and that local tracked files represent the GitHub repository. The user also confirmed that production migrations 014, 015, and 016, followed by `supabase/data/portfolio_photos_2026-10-27.sql`, all ran without error and installed the 40 reviewed photo metadata rows.
+
+`docs/PROJECT_ARCHITECTURE.md` was reconciled with the committed implementation:
+- replaced current-state sidebar descriptions with the sticky `DesktopNav` plus pinned mobile bottom navigation while preserving the sidebar sequence as historical context
+- updated the gallery model to describe the 81 WebP registry, database metadata overrides, `Design` tag, owner `/photos` tool, and completed 40-row production import
+- extended migration and deployment documentation through migration 016 and recorded the confirmed production state
+- updated future work, local Supabase status, key file references, theme count, and resolved items
+- added a document review stamp with this agent name and Eastern timestamp
+
+No application code, database schema, production data, dependencies, or runtime configuration changed. This work overlapped Claude 1's documentation area only; existing Claude entries were preserved and the new production confirmation supersedes their earlier "not in production" handoff state.
+
+**Verification**
+- `git status --short --branch` before editing: clean, `main...origin/main`
+- Documentation searches: stale current-state sidebar, migration 015 ceiling, pending photo-review, and missing-local-Supabase statements removed or converted to explicit historical context
+- No build, lint, typecheck, or runtime commands were needed for documentation-only changes
+
+**Open items / handoff**
+- The user still needs to commit and push this documentation update.
+- Security backlog S1–S9, loyalty-program decisions, and pending rebrand assets remain open.
 
 ### [Claude 1] — 2026-10-27 15:25 EDT — Pre-push safety check before first production deploy of this work
 
