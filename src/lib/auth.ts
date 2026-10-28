@@ -28,7 +28,9 @@ export const getSessionProfile = cache(
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, full_name, role, created_at")
+      // "*" rather than a column list so newly added columns (e.g. loyalty_member,
+      // migration 017) can't break sign-in if code deploys before the migration.
+      .select("*")
       .eq("id", user.id)
       .single();
 
@@ -38,6 +40,11 @@ export const getSessionProfile = cache(
     };
   }
 );
+
+/** The Loyalty page is for flagged members; the owner can always see it. */
+export function canSeeLoyalty(profile: Profile | null): boolean {
+  return !!profile && (profile.role === "owner" || profile.loyalty_member === true);
+}
 
 /** Owner session, or null for signed-out users and clients. Use in Server Actions. */
 export async function getOwnerSession(): Promise<{

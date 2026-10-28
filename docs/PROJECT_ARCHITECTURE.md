@@ -180,15 +180,17 @@ This section documents decisions made explicitly through development prompts—n
 |---------|-------|-------------|
 | Portfolio | `/` | Tag-filtered nail art gallery: short intro + Book button (no hero), featured carousel, masonry grid, lightbox |
 | Services & Pricing | `/services` | DB-backed GelX menu; owner edits prices/notes |
+| Cuticle Oil | `/cuticle-oil` | Scents (sold-out marked), one price for the single 30 ml size, and an "Order now" button to Gabs's Google Form ("Ordering opens soon" until she sets it). The owner edits everything inline on the page (migration 017) |
 | About | `/about` | Bio, contact, social links |
 | Book Appointment | `/book` | Auth-gated calendar |
+| Loyalty | `/loyalty` | **Members only** (`profiles.loyalty_member`, set by Gabs; the owner can always view). Others are redirected to `/`. Shows Gabs's punch card design (`public/loyalty/LoyaltyPunchCard.webp`) and the perks as fixed text: punch card (every 9th punch 15% off), 20% off for the 20th birthday (Instagram DM coupon), members-only booking times |
 
 ### Owner-only features
 
 | Feature | Route | Description |
 |---------|-------|-------------|
 | Analytics | `/analytics` | KPIs, revenue estimates, splits, trend charts |
-| Clients | `/clients` | Registered clients, verification status, auth helpers |
+| Clients | `/clients` | Registered clients, verification status, auth helpers, loyalty membership toggle (welcome email on joining) |
 | Appearance | `/settings` | Live theme switching (cherry-studio, pearl, flower, seasonal halloween with scheduled switch-back) |
 | Photos | `/photos` | Review/confirm gallery tags, edit titles, pick carousel photos, reorder (migrations 015–016) |
 | Calendar admin | `/book` | Slot CRUD, Google Calendar connect, manual bookings |
@@ -295,7 +297,7 @@ NailsByGabs/
 │   ├── middleware.ts                # Supabase session refresh only (no route guards)
 │   └── types/
 ├── supabase/
-│   ├── migrations/                  # 001–016 SQL (manual apply in production)
+│   ├── migrations/                  # 001–018 SQL (manual apply in production)
 │   ├── config.toml                  # Local Supabase (CLI) settings
 │   ├── data/                        # Idempotent production data imports
 │   └── email-templates/             # Supabase auth email HTML (pasted into dashboard)
@@ -315,8 +317,8 @@ NailsByGabs/
 
 | Viewport | Navigation |
 |----------|------------|
-| Desktop | One **top bar pinned while scrolling** (`components/desktop-nav.tsx`, rendered in the root layout): NailsByGabs name, labeled page tabs (active = pill), divider + owner tabs, social icons, Sign in/out. No sidebar |
-| Mobile | Pinned pill bottom nav with sliding indicator |
+| Desktop | One **top bar pinned while scrolling** (`components/desktop-nav.tsx`, rendered in the root layout): NailsByGabs name, labeled page tabs (active = pill), Loyalty tab for members, owner tabs, social icons, Sign in/out. Sized for split-screen windows: short labels below `xl` (owner: below `2xl`), and below `xl` the owner's pages fold into an "Owner" dropdown (`components/owner-menu.tsx`, shared with mobile). No sidebar |
+| Mobile | Pinned pill bottom nav with sliding indicator: Portfolio, Book, Prices, Oil, About, plus Loyalty for members. The owner gets an **Owner** item that opens an upward menu (Loyalty, Stats, Clients, Photos, Theme), positioned inside the nav rather than `fixed` (Instagram in-app browser) |
 
 The desktop pattern went through **five iterations**: clickable peek tab → full-height hover strip → top chevron tab → tall `MENU` tab → pinned top bar. The final version keeps every destination visible without covering portfolio content.
 
@@ -335,7 +337,7 @@ How it works:
 - **Switching back:** there is no cron. `getThemeState()` notices a due switch-back while rendering and calls `apply_due_theme_revert()`, which is safe for anonymous callers because it only acts once the time has passed. The switch therefore happens on the first page view after the scheduled time.
 
 - **Theme ids:** `cherry-studio` (default), `pearl`, `flower`, and seasonal `halloween` are defined in `src/lib/themes.ts`. Each one has a `[data-theme="…"]` token block in `globals.css`, and those tokens are mapped into Tailwind through `@theme inline`.
-- **Visitor read path:** the public reads only the `active_theme` key, via the "Anyone can read active theme" RLS policy. All other `app_config` keys are owner-only since migration 013.
+- **Visitor read path:** the public reads only `active_theme`, `theme_revert_at`, `theme_revert_to` and (since 017) `cuticle_oil_order_url` and `cuticle_oil_price`, via the "Anyone can read active theme" RLS policy. All other `app_config` keys are owner-only since migration 013.
 - **No OS-driven dark mode.** The unused Tailwind `dark` variant and `dark:` classes were removed on 2026-10-24. Halloween is intentionally dark only when the owner activates that site theme.
 - **Every color comes from theme tokens; nothing is hardcoded.** For example, the mobile header shadow (`.site-header-shadow`) is derived from `--accent`.
 
@@ -368,10 +370,11 @@ Signup trigger compares email to `app_config.owner_email` → assigns `owner` or
 
 | Table / function | Client (authenticated) can read | Owner can read |
 |------------------|----------------------------------|----------------|
-| `profiles` | Own row only | All rows (via `is_owner()`) |
+| `profiles` | Own row only; may **update only `full_name`** (column grant, migration 017) | All rows (via `is_owner()`); loyalty flag only through `set_loyalty_member()` |
 | `appointment_slots` | Open slots + own bookings | All rows |
 | `get_taken_slots()` RPC | Other clients' upcoming bookings as **id, times, location only** (no name/notes) | — |
-| `app_config` | `active_theme`, `theme_revert_at`, `theme_revert_to` only (public policy, migration 014) | All keys |
+| `app_config` | `active_theme`, `theme_revert_at`, `theme_revert_to` (014), `cuticle_oil_order_url`, `cuticle_oil_price` (017) only | All keys; updates the two cuticle oil keys (link https only) |
+| `cuticle_oil_scents` | All rows (public, also anon) | All rows; insert/update/delete (migration 017) |
 | `portfolio_photos` | All rows (public gallery metadata) | All rows; insert/update/delete (migration 015) |
 | `booking_events` | Nothing | All rows |
 
@@ -396,13 +399,15 @@ There are no middleware route guards. Every owner-only entry point calls a helpe
 
 ### Core model: `appointment_slots`
 
-Key columns: `start_at`, `end_at`, `status`, `booked_by`, `booked_name`, `location`, `notes`, `google_event_id`, `booking_updated_at`, `completed_at`, `reminder_48h_sent_at`.
+Key columns: `start_at`, `end_at`, `status`, `booked_by`, `booked_name`, `location`, `notes`, `google_event_id`, `booking_updated_at`, `completed_at`, `reminder_48h_sent_at`, `members_only` (018).
+
+**Members-only times (loyalty booking priority, migration 018).** Gabs can mark an open slot members-only when creating it, or later in the edit dialog. Until 24 hours before the start, only clients with `profiles.loyalty_member` can book it; after that, anyone can. Non-members still see the slot, shown locked as "Members only" with when it opens. `book_appointment_slot` enforces the rule; `src/lib/members-only.ts` mirrors it for the UI. Members are not emailed about new members-only times.
 
 ### RPCs (security definer)
 
 | RPC | Purpose |
 |-----|---------|
-| `book_appointment_slot` | Client books open slot; logs analytics; resets reminder flag |
+| `book_appointment_slot` | Client books open slot; logs analytics; resets reminder flag; rejects non-members on members-only slots more than 24h out (018) |
 | `cancel_my_booking` | Client cancels; logs event; clears slot |
 | `release_appointment_slot` | Owner releases booking |
 | `get_taken_slots` | Read-only: other clients' upcoming bookings as times only (migration 013) |
@@ -427,7 +432,7 @@ Owner OAuth stores refresh token. Every slot mutation syncs create/update/delete
 
 ## 11. Database Design & Evolution
 
-Migrations **001–016** are applied manually in Supabase SQL Editor—no CI migration runner. Locally, `npx supabase start` applies them automatically. Production migrations 014–016 and the 40-row photo metadata export were confirmed applied without error on 2026-10-27.
+Migrations **001–018** are applied manually in Supabase SQL Editor—no CI migration runner. Locally, `npx supabase start` applies them automatically. Production migrations 014–016 and the 40-row photo metadata export were confirmed applied without error on 2026-10-27. **017 and 018 are not yet applied in production** (the code tolerates their absence; run 017 first).
 
 | # | Owner-relevant change |
 |---|----------------------|
@@ -442,6 +447,8 @@ Migrations **001–016** are applied manually in Supabase SQL Editor—no CI mig
 | 014 | **Seasonal themes**: `halloween` allowed, `is_site_theme()`, `set_site_theme()`, `apply_due_theme_revert()`, public read of the revert schedule |
 | 015 | **Portfolio photos**: owner-editable gallery metadata (tags, title, featured, sort order, needs_review); rows only for edited photos |
 | 016 | **Rename gallery tag**: replaces `Fun` with `Design` in saved metadata and updates the tag constraint |
+| 017 | **Cuticle oil + loyalty**: `cuticle_oil_scents` (public read, owner write), public `cuticle_oil_price` and `cuticle_oil_order_url` config keys (owner update; link https only), `profiles.loyalty_member` / `loyalty_member_since`, owner-only `set_loyalty_member()` RPC (returns true when newly added), and clients limited to `UPDATE (full_name)` on their profile |
+| 018 | **Members-only slots**: `appointment_slots.members_only`; `book_appointment_slot` rejects non-members until 24h before the start |
 
 The production photo import is `supabase/data/portfolio_photos_2026-10-27.sql`. It idempotently upserts the owner's 40 reviewed rows after migrations 015 and 016.
 
@@ -499,6 +506,7 @@ Keeping booking emails on Resend means Gabs doesn't get owner notifications from
 | Client: "Gabs dropped your appointment" | Owner releases or deletes an upcoming platform booking (optional note from Gabs) |
 | Client: "Gabs updated your appointment" | Owner changes the **time or location** of an upcoming platform booking (optional note; shows the previous details). Changing only Gabs's calendar label sends nothing |
 | Client: 48h reminder | Daily cron. Reset when the owner changes the time, so the new time gets its own reminder |
+| Client: "You're a NailsByGabs loyalty member!" | Gabs adds the client to the loyalty program (only on a not-member → member change; removal sends nothing). The button opens `/loyalty` (`buildEmailHtml`'s `ctaPath`) |
 
 All Resend calls are wrapped in try/catch and **never throw**.
 
@@ -556,6 +564,7 @@ Custom domain required updating `NEXT_PUBLIC_SITE_URL`, Supabase redirect URLs, 
 
 - RLS on all tables. Since migration 013, clients read only their own profile and bookings (see [Section 9](#9-authentication--authorization)).
 - Security definer RPCs for booking, with internal functions revoked from API roles.
+- Clients can update only `profiles.full_name` (column privilege, migration 017). Before 017 the own-row update policy let a client change any column of their row, including the appointment counters.
 - `server-only` on privileged modules (`lib/supabase/admin.ts`, `lib/auth.ts`, `lib/clients.ts`, …).
 - Every owner page and Server Action checks `profile.role === "owner"` itself; middleware does not guard routes.
 - Cron endpoint requires `Authorization: Bearer <CRON_SECRET>`.
@@ -585,7 +594,7 @@ The review found these gaps; they are **not yet fixed**. Track fixes in `AGENTS.
 
 ### Operational checklist
 
-1. Keep production migrations synchronized manually. Migrations 001–016 are applied; 014–016 and `supabase/data/portfolio_photos_2026-10-27.sql` were confirmed successful on 2026-10-27. For a fresh environment, run migrations in order, then the photo export after 016. After 013, check the `pg_policies` query at the end of that file: any leftover `using (true)` read policy created in the dashboard undoes the restriction
+1. Keep production migrations synchronized manually. Migrations 001–016 are applied; 014–016 and `supabase/data/portfolio_photos_2026-10-27.sql` were confirmed successful on 2026-10-27. **017 (cuticle oil + loyalty) and then 018 (members-only slots) are pending in production.** For a fresh environment, run migrations in order, then the photo export after 016. After 013, check the `pg_policies` query at the end of that file: any leftover `using (true)` read policy created in the dashboard undoes the restriction
 2. Set real `owner_email` in `app_config`
 3. Configure Vercel env vars (see `.env.example`)
 4. Connect Google Calendar from owner account on `/book`

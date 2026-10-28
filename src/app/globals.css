@@ -287,27 +287,6 @@
       var(--page-gradient-end) 100%
     );
   }
-  .spotlight-card {
-    position: relative;
-    overflow: hidden;
-  }
-  .spotlight-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: opacity 350ms var(--ease-luxury);
-    background: radial-gradient(
-      420px circle at var(--spot-x, 50%) var(--spot-y, 0%),
-      color-mix(in srgb, var(--accent) 24%, transparent),
-      transparent 55%
-    );
-    pointer-events: none;
-  }
-  .spotlight-card:hover::before,
-  .spotlight-card:focus-within::before {
-    opacity: 1;
-  }
   .scroll-reveal {
     overflow: hidden;
   }

@@ -12,6 +12,7 @@ import {
   type LocationFilter,
 } from "@/lib/appointment-locations";
 import { formatBusinessDayKey } from "@/lib/business-timezone";
+import { isMembersOnlyActive } from "@/lib/members-only";
 import { cn } from "@/lib/utils";
 import {
   formatDayHeader,
@@ -39,6 +40,8 @@ type AppointmentCalendarGridProps = {
   slots: SlotWithBooker[];
   userId: string;
   isOwner: boolean;
+  /** Loyalty members can book members-only slots (others see them locked). */
+  isMember: boolean;
   getLabel: (slot: SlotWithBooker) => string;
   onSelectSlot: (slot: SlotWithBooker) => void;
   selectedSlotId?: string | null;
@@ -48,6 +51,7 @@ export function AppointmentCalendarGrid({
   slots,
   userId,
   isOwner,
+  isMember,
   getLabel,
   onSelectSlot,
   selectedSlotId,
@@ -121,6 +125,14 @@ export function AppointmentCalendarGrid({
     const locationClass = getSlotLocationClass(slot.location);
 
     if (slot.status === "open") {
+      if (isMembersOnlyActive(slot)) {
+        // Dashed border marks members-only; non-members can't book it yet.
+        return cn(
+          locationClass,
+          "border-dashed border-accent/70",
+          !isOwner && !isMember ? "opacity-75" : "hover:brightness-[0.98]"
+        );
+      }
       return cn(locationClass, "hover:brightness-[0.98]");
     }
     if (slot.booked_by === userId) {

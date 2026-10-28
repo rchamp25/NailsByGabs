@@ -121,17 +121,24 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, and a non-blocking 
 | Fonts | `next/font/google` in `layout.tsx`: DM Sans (`--font-sans`) and Cormorant Garamond (`--font-serif`). `h1`–`h3` default to serif |
 | Motion tokens | `--ease-luxury`, `--ease-emphasis`, `--duration-*` in `@theme inline`. A `prefers-reduced-motion` block sits at the bottom of `globals.css` |
 | Layout shell | `layout.tsx`: a plain wrapper `div`, then `<main class="mobile-ambient-bg">` containing `DesktopNav`, Halloween layers, `.app-scroll-region` (with `PageMotion`), and `MobileBottomNav`. The shadcn sidebar (`ui/sidebar`, `sheet`, `tooltip`, `separator`, `skeleton`, `use-mobile`, `app-sidebar`, `sidebar-auth`) was **deleted on 2026-10-27** |
-| Desktop nav | `src/components/desktop-nav.tsx` (in the root layout, so it does not re-animate on page change): one bar **pinned to the top** (`sticky`, md and up). It holds the NailsByGabs name (`seasonal-title`), labeled page tabs (active = pill), a divider plus owner tabs, social icons, and Sign in/out. Items come from `src/lib/nav.ts`, shared with mobile. The hidden-sidebar history (hover tab → tall MENU tab → top bar) is in PROJECT_ARCHITECTURE §17.10 |
-| Mobile nav | `src/components/mobile-bottom-nav.tsx`: pill bar with sliding indicator; items from `src/lib/nav.ts` (owner sees 8: Portfolio, Book, Prices, About, Stats, Clients, Photos, Theme). `body` is a fixed-height flex column on mobile and only `.app-scroll-region` scrolls; this is what keeps the bottom nav pinned in in-app browsers |
+| Desktop nav | `src/components/desktop-nav.tsx` (in the root layout, so it does not re-animate on page change): one bar **pinned to the top** (`sticky`, md and up). It holds the NailsByGabs name (`seasonal-title`), labeled page tabs (active = pill), a **Loyalty** tab for members (`showLoyalty`), owner tabs, social icons, and Sign in/out. **Built to fit split-screen windows** (verified with no clipped tabs from 790px to 1600px for visitors, members, and the owner):
+  - Tabs show `short` labels below `xl`; the owner's below `2xl`.
+  - Tab padding is `px-3` below `lg`; the wordmark is `text-xl` below `lg`.
+  - Below `xl`, the owner's Loyalty and owner pages fold into an **"Owner ▾" dropdown**, the shared `components/owner-menu.tsx` also used by the mobile bar. It sits outside the `overflow-x-auto` tab row so it can't be clipped. At `xl`+ they show inline after a divider.
+  
+  Items come from `src/lib/nav.ts` (`PUBLIC_NAV`, `LOYALTY_NAV`, `OWNER_NAV`, `OWNER_MENU_NAV`), shared with mobile. The hidden-sidebar history (hover tab → tall MENU tab → top bar) is in PROJECT_ARCHITECTURE §17.10 |
+| Mobile nav | `src/components/mobile-bottom-nav.tsx`: pill bar with sliding indicator; items from `src/lib/nav.ts`. Everyone: Portfolio, Book, Prices, Oil, About. Members add Loyalty (6). The owner gets a sixth **Owner** item that opens an upward menu (Loyalty, Stats, Clients, Photos, Theme). The menu (`components/owner-menu.tsx`) is absolutely positioned inside the nav (no `position: fixed`) and closes on navigation, an outside tap, or Escape. `body` is a fixed-height flex column on mobile and only `.app-scroll-region` scrolls; this is what keeps the bottom nav pinned in in-app browsers |
 | Page header | `src/components/site-header.tsx`: **mobile-only** title bar (plus optional `actions` and sign-in/out). On desktop it renders only a screen-reader `h1` |
-| Shared page scaffolding | Each page uses `SiteHeader`, then `.page-gradient` wrapper, then `ScrollReveal` sections with a `.section-kicker` eyebrow, a serif `h2`, and a `.rhythm-copy` paragraph |
-| Effects library | `src/components/effects/`: `profile-card` (About; takes `imagePosition`), `scroll-reveal` (everywhere), `halloween`. The hero-only effects (blur-text, rotating-text, silk-background, star-border) were deleted with the hero on 2026-10-27 |
+| Shared page scaffolding | Each page uses `SiteHeader`, then `.page-gradient` wrapper, then `ScrollReveal` sections with a `.section-kicker` eyebrow, a serif `h2`, and a `.rhythm-copy` paragraph. **Services & Pricing, Cuticle Oil, and Loyalty use a centered column**: the intro is `mx-auto w-full max-w-4xl text-center` (Loyalty uses `max-w-3xl`) and its paragraph is `mx-auto`. The card block uses the same `mx-auto w-full max-w-*`, so both share edges. Cards side by side match heights via `[&>.scroll-reveal-inner]:h-full` on `ScrollReveal` plus `h-full` on the card. The owner's price-editor rows stack (name, then price + note) so half-width cards don't squeeze the name |
+| Effects library | `src/components/effects/`: `profile-card` (About; takes `imagePosition`), `scroll-reveal` (everywhere), `halloween`. The hover/focus card glow (`.spotlight-card`) was removed everywhere on 2026-10-27 at the owner's request; do not reintroduce it. The hero-only effects (blur-text, rotating-text, silk-background, star-border) were deleted with the hero on 2026-10-27 |
 | Portfolio | Photo list and **default** metadata in `src/lib/portfolio.ts` (`LABELED_SETS` with explicit tags, and `PORTFOLIO_FILE_NAMES` with tags parsed from filenames, combined into `PORTFOLIO_PHOTO_DEFAULTS`). The owner's edits live in the `portfolio_photos` table (migration 015) and are merged by `getManagedPhotos()` / `getPortfolioView()` in `src/lib/portfolio-photos.ts`, which falls back to the defaults if the table is missing. Owner editor: **`/photos`** (`components/photos/photo-manager.tsx`, `app/photos/actions.ts`) for tags, title, review status, carousel pick, and order. Public UI in `components/portfolio/`: carousel (click or tap opens `PortfolioLightbox`), showcase (clicking the active tag returns to All), and the shared lightbox |
 | Photo crop points | `focal` in `LABELED_SETS`, or `focalByFileName` for filename-tagged photos, used as CSS `object-position`. Each value is the center of the nail art as a percentage of the EXIF-rotated image. Fallback: `DEFAULT_FOCAL` (`50% 58%`) |
-| Image pipeline | **Originals live in git-ignored `image-originals/`**: `portfolio/` (81), `about/`, `branding/`, `photoshoot/` (unused Gabby Nails shoot), `retired/` (old headshot), and `review/` (tag review sheets for the owner). Web copies use the Sharp optimizer (EXIF-rotate, long edge 2000px, q80 WebP, metadata stripped). Gallery originals fell from 238 MB to 9.4 MB; the new About photo fell from 2.9 MB to 62 KB. The OG logo stays an optimized palette PNG because Next `ImageResponse` rejected an embedded WebP data URI |
+| Image pipeline | **Originals live in git-ignored `image-originals/`**: `portfolio/` (81), `about/`, `branding/`, `loyalty/` (punch card PNG → `public/loyalty/LoyaltyPunchCard.webp`, q90), `photoshoot/` (unused Gabby Nails shoot), `retired/` (old headshot), and `review/` (tag review sheets for the owner). Web copies use the Sharp optimizer (EXIF-rotate, long edge 2000px, q80 WebP, metadata stripped). Gallery originals fell from 238 MB to 9.4 MB; the new About photo fell from 2.9 MB to 62 KB. The OG logo stays an optimized palette PNG because Next `ImageResponse` rejected an embedded WebP data URI |
 | Home-page extras | `components/social-links.tsx` (Instagram/TikTok icon links, passed to `SiteHeader` through its `actions` prop) and `components/book-cta-bar.tsx` (sticky Book button; read its comment before moving it) |
 | Email colors | Booking emails in `lib/notifications.ts` use `THEME_CATALOG[n].email` from `lib/themes.ts` for the active theme. **When you change theme colors in `globals.css`, update the matching `email` palette.** Supabase auth templates in `supabase/email-templates/` are static HTML pasted into the Supabase dashboard and still use the old red (`#c62828`) |
 | Owner authorization | `lib/auth.ts`: `requireOwner(redirectTo)` for pages and routes (redirects), `getOwnerSession()` for Server Actions (returns null). `getSessionProfile()` is cached per request with React `cache()` |
+| Cuticle oil page | `/cuticle-oil` (public). Data from `getCuticleOilPage()` in `src/lib/cuticle-oil.ts`: table `cuticle_oil_scents` (name, `sold_out`, `sort_order`), plus `app_config.cuticle_oil_price` (one price for the only size, `CUTICLE_OIL_SIZE` = "30 ml bottle"; seeded `$12`) and `app_config.cuticle_oil_order_url` (Google Form link; empty → "Ordering opens soon"). Falls back to a "coming soon" state when migration 017 is missing. The owner edits **in place on the page** (`components/cuticle-oil/cuticle-oil-editor.tsx`, actions in `app/cuticle-oil/actions.ts`). Visitors get `cuticle-oil-menu.tsx`. Limits and the https-only link check are in `src/lib/cuticle-oil-limits.ts` (client-safe) and mirror the DB checks |
+| Loyalty | `profiles.loyalty_member` / `loyalty_member_since` (migration 017). `canSeeLoyalty(profile)` in `lib/auth.ts` (member or owner) gates the nav tab and `/loyalty` (others redirect to `/`). Gabs toggles membership on `/clients` (`setLoyaltyMembership` → `set_loyalty_member()` RPC). The first time a client is added, they get `notifyClientOfLoyaltyMembership()`; removal sends nothing. `/loyalty` shows Gabs's punch card image (`public/loyalty/LoyaltyPunchCard.webp`) under the intro, then the fixed perks (`PERKS`: punch card with every 9th punch 15% off; 20% off for the 20th birthday via Instagram DM coupon; members-only booking times). **Members-only slots** (`appointment_slots.members_only`, migration 018): only members can book until 24h before the start, then anyone can. Non-members see them locked. The rule lives in `src/lib/members-only.ts` for the UI and in `book_appointment_slot` for enforcement |
 | Copy/content | `src/lib/data.ts` (About bio, location, socials) and `src/lib/site-metadata.ts` (site name, tagline, description, OG). Services/prices come **from the DB** (`service_categories`, `service_items`) and are owner-editable on `/services` |
 | Brand assets | Raw logo source: git-ignored `image-originals/branding/source/NailsByGabsLogoSource.png`. Public `NailsByGabsLogo.png` is a cropped metadata-free palette PNG for OG/Twitter; `NailsByGabsIcon.png` is the metadata-free square favicon/shortcut/Apple icon. Desktop nav intentionally keeps the text wordmark. About photo: full-resolution `public/about/NailsByGabsAbout.webp` (6000×4000, q92, metadata stripped; original `image-originals/about/NailsByGabsAbout.JPEG`). It is shown in a 4:3 `ProfileCard` with `sizes="(min-width: 1024px) 55vw, 105vw"` and `quality={90}`. **When an image is cropped by `object-cover`, set `sizes` for the width needed to cover the card's height, not the card's width**, or it will be upscaled and blurry |
 
@@ -149,7 +156,9 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, and a non-blocking 
 
 - **Production and repository state (confirmed 2026-10-27 15:57 EDT):** commit `15a0180` has been pushed, local tracked files represent the GitHub repository, and production migrations 014 → 015 → 016 plus `supabase/data/portfolio_photos_2026-10-27.sql` ran without error. The export installed all 40 reviewed photo metadata rows.
 
-- **Architecture documentation is synchronized through migration 016.** Migration 013 (`013_restrict_client_reads.sql`, commit `4578c0b`) limits clients to their own profile, open slots, and their own bookings. Other clients' bookings arrive only as times through `get_taken_slots()`. UI that shows booked slots to clients must not expect names or notes.
+- **Migrations 017 and 018 (`018_members_only_slots.sql`) are applied locally, not in production; run 017 before 018.** 018 replaces `book_appointment_slot`; keep its members-only check if that function is ever redefined. Before 018, the members-only checkbox returns a "needs migration 018" error and nothing is locked.
+- **Migration 017 (`017_cuticle_oil_and_loyalty.sql`)**: not in production yet. The code is safe to deploy first: the cuticle oil page shows "coming soon", the loyalty toggle is disabled, and nobody sees the Loyalty tab. 017 also **revokes clients' blanket `UPDATE` on `profiles` and grants only `UPDATE (full_name)`**. The 001 policy had let a client edit any column of their own row (role is protected by a trigger, but the appointment counters and the new loyalty flag were not). Any future client-editable profile column needs its own column grant.
+- **Architecture documentation is synchronized through migration 017.** Migration 013 (`013_restrict_client_reads.sql`, commit `4578c0b`) limits clients to their own profile, open slots, and their own bookings. Other clients' bookings arrive only as times through `get_taken_slots()`. UI that shows booked slots to clients must not expect names or notes.
 - **Owner phone moved to env.** `NEXT_PUBLIC_OWNER_PHONE` (commit `1d8d878`). The About page hides the phone link when the variable is unset.
 - **The 40 delivered gallery sets are reviewed and live in production metadata.** Their `portfolio_photos` rows have `needs_review=false` and override code defaults. Do not "fix" their tags in `LABELED_SETS`; the DB remains the source of truth. Newly registered photos without saved rows still default to Needs review.
 - **Photo shoot images** (`image-originals/photoshoot/Gabby Nails-*.JPEG`) are intentionally unused for now. Seven of them were previously `git add`ed under `public/portfolio/`, so the user needs to unstage them (`git rm --cached`).
@@ -161,6 +170,7 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, and a non-blocking 
 - **`fixed` positioning on mobile:** the mobile page scrolls inside `.app-scroll-region` (not the window), and `PageMotion` leaves a transform on an ancestor. Do not use `position: fixed` for in-page UI. Use `sticky` or a flex sibling like `MobileBottomNav`. Most visitors arrive through Instagram's in-app browser, so test there.
 - **`npm install` warns about blocked install scripts** (`sharp`, `unrs-resolver`). Both work from prebuilt binaries, so the warning can be ignored.
 - **No route-level guards:** middleware only refreshes the session. Every new owner-only page, route, or Server Action must call `requireOwner()` or `getOwnerSession()` from `lib/auth.ts`.
+- **Stopping a background `npm run dev` from the agent tool can orphan the Next server** (`node …next/dist/server/lib/start-server.js`). The next start then silently moves to port 3001 while tests keep hitting the stale server on 3000. The symptom was a hydration mismatch where the SSR HTML lacked a just-edited change. Before restarting, check `netstat -ano | grep :3000`, stop the leftover node PIDs whose command line is this repo's `next`, and clear `.next` if a stale chunk persists.
 - **Migrations are manual.** Anything in `supabase/migrations/` must be pasted into the Supabase SQL Editor by a human. State in your entry whether yours has been applied.
 
 ### 2.6 Local development (set up 2026-10-27)
@@ -168,7 +178,7 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, and a non-blocking 
 Local Supabase runs in Docker through the Supabase CLI (`npx supabase`). The CLI is not a project dependency, and there is no seed file yet.
 
 1. Start **Docker Desktop**. It does not start with Windows unless the user enables that.
-2. Run `npx supabase start` from the repo root. It applies `supabase/migrations/001–016` automatically. All 16 apply cleanly to a fresh database.
+2. Run `npx supabase start` from the repo root. It applies `supabase/migrations/001–018` automatically.
 3. Run `npm run dev` and open http://localhost:3000.
 4. Stop everything with `npx supabase stop`. Data persists between runs. To rebuild the database from migrations, run `npx supabase db reset`.
 
@@ -232,6 +242,12 @@ The user is meeting Gabs on 2026-10-25. Expected inputs and what each one touche
 - Gabs turns membership on and off from the **Clients page**.
 - It must be **visible to clients** in some form.
 
+**Built 2026-10-27 (Claude 1):**
+- the membership flag, the owner toggle with a welcome email on joining, and a members-only `/loyalty` page plus nav tab
+- the real perks (physical punch card, 20th-birthday 20% off, members-only times that open to all 24h before)
+
+The punch card and birthday coupon are offline (no site tracking or birthday collection, by the user's choice). The questions below are mostly answered by that; revisit them only if digital tracking is requested.
+
 **Open questions to ask before building.** The user has the details and will come back to this; ask these, don't assume:
 1. **Reward:** what members get (discount, free add-on, every Nth set free, …).
 2. **Earning:** what counts. Completed appointments only? Do manual/offline bookings count?
@@ -246,6 +262,332 @@ The user is meeting Gabs on 2026-10-25. Expected inputs and what each one touche
 ## 3. Log
 
 <!-- Newest entries first. Use the template in §1.6. -->
+
+### [Claude 1] — 2026-10-27 20:50 EDT — Pre-commit production build check: passed
+
+**Commits:** none. The user will commit and push to production after this.
+
+**Steps:**
+1. Stopped the dev server and confirmed no orphaned `next` node processes and nothing listening on :3000.
+2. Ran `npm run build` with CI's placeholder env (`NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co`, `NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key`, `NEXT_PUBLIC_SITE_URL=https://nailsbygabs.org`).
+3. Restarted the dev server.
+
+**Result:** exit 0, compiled successfully, all 22 routes generated.
+- New routes are present: `/cuticle-oil`, `/loyalty`.
+- `/opengraph-image` and `/twitter-image` are static.
+
+**Warning:** the single warning is pre-existing and comes from a library. `@supabase/supabase-js` uses `process.version`, which is unsupported in the Edge Runtime. It is pulled in through `@supabase/ssr` by `src/lib/supabase/middleware.ts`, which is unchanged since `357d72a`.
+
+Lint and typecheck were already clean.
+
+**Production follow-up (user):** after deploying, run `017_cuticle_oil_and_loyalty.sql`, then `018_members_only_slots.sql`, in the Supabase SQL Editor.
+
+### [Claude 1] — 2026-10-27 20:41 EDT — Share-preview card: logo lettering moved to the vertical center
+
+**Commits:** none (the user commits).
+
+**Files:** `src/app/opengraph-image.tsx`. `twitter-image.tsx` re-exports it, so both previews change.
+
+**Request:** move "Nails By Gabs" (above "GELX NAILS") down toward the middle of the link-preview card. The user also decided **not** to change the favicon; leave `NailsByGabsIcon.png` as is.
+
+**Why it sat high:**
+- `public/branding/NailsByGabsLogo.png` is 1513×1001, but the lettering only fills rows 53–555 (measured with sharp). The bow hangs below it to row 952.
+- The old flex layout centered the *whole image*, which put the lettering's center around y≈200 of 630.
+- Shifting the 720px-wide image down would have pushed the bow past the card's bottom edge.
+
+**Change:**
+- The layout is now computed from those measured bounds (`LOGO_SOURCE` constants) with absolute positioning inside the white card.
+- The **lettering plus a 24px gap plus the "GELX NAILS" tagline** are centered as a group. The logo is 660px wide (was 720) so the bow still fits.
+- The bow hangs to the right of the tagline. The image stays horizontally centered, as before.
+- If the logo file is ever replaced, re-measure `letteringTop`/`letteringBottom`.
+
+**Verified:**
+- `/opengraph-image` and `/twitter-image` return 200 `image/png`.
+- In the rendered PNG the strong-pink ink spans y 173–567, inside the card (32–598), with nothing clipped. The screenshot was checked.
+- `tsc --noEmit` and `npm run lint` are clean.
+
+**Note:** Instagram, iMessage, and Facebook cache link previews, so already-shared links may show the old card for a while. Facebook's Sharing Debugger can force a refresh.
+
+### [Claude 1] — 2026-10-27 20:21 EDT — Punch card image on the Loyalty page (optimized, metadata stripped)
+
+**Commits:** none (the user commits).
+
+**Files:**
+- New: `public/loyalty/LoyaltyPunchCard.webp`
+- New (git-ignored): `image-originals/loyalty/LoyaltyPunchCard.png`
+- Edited: `src/app/loyalty/page.tsx`, `docs/PROJECT_ARCHITECTURE.md`
+
+**What the user asked for:** add Gabs's PNG of the physical punch card to the Loyalty page, below the title and description and above the perk boxes. Run it through the optimize and metadata-strip script and put the files in the right folders.
+
+**Image handling:**
+- **Input:** the user dropped `public/portfolio/Copy of Loyalty Card - 2.png` (600×1050 RGB PNG, 390 KB, with **EXIF and XMP metadata**).
+- **Original:** moved and renamed (no spaces) to the git-ignored `image-originals/loyalty/LoyaltyPunchCard.png`, so nothing is left in `public/portfolio/`.
+- **Web copy:** ran `npm run images:optimize -- image-originals/loyalty --out public/loyalty --quality 90`, producing `public/loyalty/LoyaltyPunchCard.webp` (600×1050, 68 KB, 83% smaller).
+  - Quality 90 instead of the default 80 because the card is mostly lettering.
+  - It is not upscaled; the script's `withoutEnlargement` keeps it at 600px.
+- **Verified:** sharp reports no EXIF/XMP/ICC/IPTC, and the file contains no `EXIF`/`XMP `/`ICCP` chunks.
+- **Not a gallery photo:** the script's "register in portfolio.ts" hint does not apply.
+
+**Page:**
+- A `next/image` in its own `ScrollReveal` between the intro and the perk grid.
+- Settings: `width={600} height={1050}`, `sizes="(min-width: 640px) 320px, 80vw"`, `quality={90}`, `max-w-xs` from `sm` up and `max-w-[80vw]` on phones.
+- Centered, with a rounded accent border and descriptive alt text.
+- The browser picks the 640w candidate, which is served at the source's 600px.
+
+**Note:** files in `public/` are reachable by URL without signing in. The page is members-only, but the image itself is not secret; it shows Gabs's public Instagram, email, and site.
+
+**Testing:** headless Chrome as a temp member (deleted afterwards) at 1280, 960, and 390 (mobile).
+- The image loads and sits below the intro `h2` and above the first perk card.
+- It is centered (equal gaps) with no sideways scroll.
+- Screenshots checked.
+- `tsc --noEmit` and `npm run lint` are clean.
+
+### [Claude 1] — 2026-10-27 19:58 EDT — Loyalty perks, members-only appointment times (migration 018), single cuticle oil price
+
+**Commits:** none (the user commits). **Migrations 017 (revised) and 018 are applied locally, NOT in production.**
+
+**Files:**
+- New: `supabase/migrations/018_members_only_slots.sql`, `src/lib/members-only.ts`
+- Edited:
+  - `supabase/migrations/017_cuticle_oil_and_loyalty.sql`
+  - `src/types/database.ts`, `src/lib/cuticle-oil.ts`, `src/lib/cuticle-oil-limits.ts`, `src/lib/notifications.ts`
+  - `src/app/book/page.tsx`, `src/app/book/actions.ts`
+  - `src/components/booking/booking-calendar.tsx`, `src/components/booking/appointment-calendar-grid.tsx`
+  - `src/app/cuticle-oil/page.tsx`, `src/app/cuticle-oil/actions.ts`
+  - `src/components/cuticle-oil/cuticle-oil-menu.tsx`, `src/components/cuticle-oil/cuticle-oil-editor.tsx`
+  - `src/app/loyalty/page.tsx`
+  - `docs/PROJECT_ARCHITECTURE.md`
+
+**The program, as the user supplied it (Gabs's rules):**
+- **Punch card:** physical, with a punch per appointment. Every 9th punch is 15% off that set.
+- **Birthday:** "turning 20? 20% off a set". The user confirmed this is **only the 20th birthday**, not age-scaled. The coupon is sent by Instagram DM and expires 6 months out. The site does **not** collect birthdays; Gabs tracks them herself.
+- **Booking priority:** members-only appointment times. Gabs flags open slots at creation and can toggle the flag later in the edit dialog.
+  - Non-members see them **locked**.
+  - They **open to everyone 24 hours before** the start.
+  - Members are **not emailed** when such times are posted.
+- **Perks text is fixed** in code (`PERKS` in `src/app/loyalty/page.tsx`), not owner-editable.
+- **Cuticle oil:** one size, a **30 ml bottle**, at $12. The price list editor is replaced by a single editable price field. The size text is the constant `CUTICLE_OIL_SIZE` in `cuticle-oil-limits.ts`.
+
+**Database:**
+- **017, revised in place.** It was uncommitted and never run in production, so editing it was safe.
+  - `cuticle_oil_prices` is gone.
+  - New `app_config` key `cuticle_oil_price` is seeded with `$12` and publicly readable.
+  - The owner update policy is now **"Owner can update cuticle oil settings"**, covering both keys: price 1–20 characters; link `''` or https up to 500 characters. The old policy name is dropped too.
+  - Locally: dropped the (empty) `cuticle_oil_prices` table and re-ran 017, which is idempotent.
+- **018.**
+  - Adds `appointment_slots.members_only boolean not null default false`.
+  - `create or replace` of `book_appointment_slot` (012's body plus a member check):
+    - Non-members get `This time is reserved for loyalty members until 24 hours before the appointment.` while `members_only and start_at > now() + 24h`.
+    - The UPDATE's WHERE clause repeats the condition, so the check is atomic.
+  - Requires 017's `profiles.loyalty_member`. Existing grants carry over with `create or replace`.
+
+**App:**
+- **Shared rule.** `src/lib/members-only.ts` provides `isMembersOnlyActive(slot)` (open, flagged, more than 24h out) plus `formatMembersOnlyOpensAt()` (Eastern). The UI uses it; the RPC is the authority.
+- **Pre-018 safety:**
+  - `/book` selects `*` with the booker embed, mapping `members_only`.
+  - `createSlot` sends `members_only` only when checked. `updateSlot` reads `*` and writes the flag only when it changed on an open slot.
+  - Writing the column before 018 returns "Members-only times need database migration 018."
+- **Owner calendar:**
+  - The create form has a "Loyalty members only" checkbox, disabled for pre-booked slots; the button reads "Add members-only slot".
+  - The edit dialog has a toggle for open slots. Booked slots keep their flag, so it applies again if the booking is released or cancelled.
+  - Chip label "Open · members only"; the selected card says "Members only until <time>, then open to everyone."
+- **Clients:**
+  - The chip label is "Members only" with a dashed accent border; non-members also see it dimmed.
+  - Non-members clicking it get no booking dialog and no Reserve button. The selected card shows a lock and "Reserved for loyalty members. It opens to everyone <time>."
+  - The mobile "Book next available spot" skips locked slots.
+  - The `/book` intro explains the rule, worded differently for members and non-members.
+- **Loyalty page:**
+  - Three perk cards (Punch card / Birthday discount / Booking priority) in a centered `max-w-4xl` grid, 3 columns at `lg` with matched heights.
+  - A "See open times" button for members.
+- **Welcome email:** now lists the three perks.
+- **Cuticle oil:**
+  - `getCuticleOilPage()` returns `price` (from `app_config`) instead of `prices`.
+  - `setCuticleOilPrice` replaces the three price-row actions.
+  - The visitor Price card shows the big price plus "30 ml bottle". The page's empty state now depends on scents only.
+  - The copy no longer mentions choosing a size.
+  - In the owner editor, the Price card is `md:self-start` so it doesn't stretch to the Scents card's height.
+
+**Testing:** headless Chrome plus supabase-js RPC calls, scratchpad `cdp-members.mjs` and `cdp-oilprice.mjs`, with a temp owner, client, and member (all deleted). **24/24 passed:**
+- RPC:
+  - a non-member is blocked more than 24h out, and the slot stays open
+  - a non-member can book under 24h out
+  - a member can book more than 24h out
+- Owner UI:
+  - the members-only checkbox creates a flagged slot
+  - chip label and opens-at text are correct
+  - the edit toggle switches the flag off and on
+  - the price saves
+- Non-member UI: "Members only" chip, no dialog, lock message, no Reserve, intro copy.
+- Member UI: the booking dialog opens and the booking succeeds; the perks show on `/loyalty`; mobile has no sideways scroll.
+- Email: the welcome email lists the perks.
+- Oil: the visitor sees $12 and the 30 ml bottle; the owner field shows $12.
+
+Test slots and their `booking_events` rows were deleted, and the price was reset to `$12`. The snapshot otherwise matches (`users=2 slots=1 photo_rows=40 services=14 events=10`, 0 scents).
+
+**Note for the user:** `client1@example.com` became a loyalty member at 19:03 EDT through the Clients page (a welcome email to that address is in Mailpit at the same second). No test script touches that account, so it was presumably the user testing in their own browser. It was left as is.
+
+`tsc --noEmit` and `npm run lint` are clean.
+
+**Production order:** 017, then 018, in the Supabase SQL Editor. Either can follow the deploy.
+
+### [Claude 1] — 2026-10-27 19:12 EDT — Centered Services/Cuticle Oil/Loyalty, split-screen-friendly nav, About glow removed
+
+**Commits:** none (the user commits).
+
+**Files:**
+- New: `src/components/owner-menu.tsx`
+- Edited:
+  - `src/app/about/page.tsx`, `src/app/globals.css`, `src/lib/nav.ts`
+  - `src/components/desktop-nav.tsx`, `src/components/mobile-bottom-nav.tsx`
+  - `src/app/services/page.tsx`, `src/components/services/services-menu.tsx`
+  - `src/app/cuticle-oil/page.tsx`, `src/components/cuticle-oil/cuticle-oil-menu.tsx`, `src/components/cuticle-oil/cuticle-oil-editor.tsx`
+  - `src/app/loyalty/page.tsx`
+  - `docs/PROJECT_ARCHITECTURE.md`
+
+**What the user asked for:**
+1. Remove the About contact-card glow too (confirming that `.spotlight-card` was the glow they meant).
+2. Center the content of the price list, loyalty, and cuticle oil pages at full screen, and make the pages behave well in non-maximized (split-screen) windows.
+
+**Changes:**
+- **Glow:** dropped `spotlight-card` from the About card. With no users left, the `.spotlight-card` rules were deleted from `globals.css`.
+- **Centering:** on all three pages the intro and the card block share one centered column (`mx-auto w-full max-w-4xl`; Loyalty uses `max-w-3xl`).
+  - The intro text is centered, including the kicker, `h2`, `mx-auto` paragraph, Order button, and Member-since pill. Card contents stay left-aligned.
+  - Paired cards (oil Prices/Scents, service categories) now match heights. `ScrollReveal` wraps children in `.scroll-reveal-inner`, so the reveal gets `[&>.scroll-reveal-inner]:h-full` and the card `h-full`.
+- **Split-screen nav:** the measurements showed the real split-screen problem was the desktop bar. At 960px a member's "Loyalty" tab was clipped ("Loya") by the row's hidden scroll, and the owner's ten tabs overflowed at anything under about 1300px. The desktop bar now:
+  - shows short labels below `xl` (the owner's below `2xl`)
+  - uses `px-3` tabs and a `text-xl` wordmark below `lg`, and tighter header gaps and padding below `lg`
+  - folds the owner's Loyalty and owner pages into an "Owner ▾" dropdown below `xl`
+- **Shared menu:** the dropdown logic moved out of `mobile-bottom-nav.tsx` into `components/owner-menu.tsx`, with caller-supplied trigger and panel position. The desktop menu is placed outside the `overflow-x-auto` row so it isn't clipped. `OWNER_MENU_NAV` was added to `nav.ts`.
+- **Owner price editor:** each `services-menu` row was a single `1fr auto auto` row, which squeezed service names to two or three lines in half-width cards (in full screen too). Rows now stack: the name on its own line, then `grid-cols-[7rem_1fr]` Price + Note.
+
+**Testing:** headless Chrome via CDP, scratchpad `cdp-center.mjs`, `cdp-navwidth*.mjs`, and `cdp-owner-shots.mjs`, with temp accounts (since deleted).
+- **Centering:** all three pages at window widths 1920, 1280, 960, and 800 have equal left and right gaps for both the intro and the cards, and no sideways scroll.
+  - At 700 the phone layout applies. The inner scroll region's 15px desktop scrollbar makes the gaps read as 16/31; this is a measurement artifact.
+- **Desktop bar:** checked visitor, member, and owner at 790, 800, 850, 960, 1300, and 1600. There were 0 clipped tabs and no header overflow, and the owner dropdown appears exactly below `xl`.
+  - The dropdown lists Loyalty, Stats, Clients, Photos, Theme. It stays on screen, navigates and closes, and the Owner tab highlights on owner pages.
+  - Note that a 1280px window is about 1247px of viewport after the scrollbar, so it still shows the dropdown.
+- **Mobile owner menu:** still works after the refactor.
+- **Owner editors:** `/services` and `/cuticle-oil` at 960 and 1920 have no sideways scroll, and screenshots look right.
+- **Data:** the snapshot is unchanged (`users=2 slots=1 photo_rows=40 services=14 events=10`, oil tables empty, link `''`, 0 members).
+- `tsc --noEmit` and `npm run lint` are clean.
+
+### [Claude 1] — 2026-10-27 18:52 EDT — Removed card glow on Services & Pricing, Cuticle Oil, and Loyalty (owner request)
+
+**Commits:** none (the user commits).
+
+**Files:**
+- `src/components/services/services-menu.tsx`
+- `src/components/cuticle-oil/cuticle-oil-menu.tsx`
+- `src/components/cuticle-oil/cuticle-oil-editor.tsx`
+- `src/app/loyalty/page.tsx`
+
+**Change:** dropped the `spotlight-card` class from the cards on these three pages.
+
+- `.spotlight-card::before` in `globals.css` paints a 420px accent radial gradient (24% `--accent`) behind the card content. It fades in on `:hover` and `:focus-within`.
+- Nothing sets `--spot-x/--spot-y`, so it is a fixed glow at the card's top center. It also lit up whenever the owner typed into an editor field.
+- The cards keep their border, `bg-card/90`, shadow, and blur.
+- The class and its CSS remain for the About page contact card, the only other user, which the user did not mention.
+- The Halloween bottom fog (`.halloween-fog`) is a separate, site-wide effect and is unchanged.
+
+### [Claude 1] — 2026-10-27 18:41 EDT — Cuticle Oil page (owner-editable) and members-only Loyalty page (migration 017)
+
+**Commits:** none (the user commits). **Migration 017 is applied locally, NOT in production.**
+
+**Files:**
+- New:
+  - `supabase/migrations/017_cuticle_oil_and_loyalty.sql`
+  - `src/lib/cuticle-oil.ts`, `src/lib/cuticle-oil-limits.ts`
+  - `src/app/cuticle-oil/page.tsx`, `src/app/cuticle-oil/actions.ts`
+  - `src/components/cuticle-oil/cuticle-oil-menu.tsx`, `src/components/cuticle-oil/cuticle-oil-editor.tsx`
+  - `src/app/loyalty/page.tsx`
+- Edited:
+  - `src/types/database.ts`, `src/lib/auth.ts`, `src/lib/clients.ts`, `src/lib/notifications.ts`, `src/lib/nav.ts`
+  - `src/app/clients/actions.ts`, `src/components/clients/clients-list.tsx`
+  - `src/components/desktop-nav.tsx`, `src/components/mobile-bottom-nav.tsx`, `src/app/layout.tsx`
+  - `docs/PROJECT_ARCHITECTURE.md`
+
+**What the user asked for (with the answers to clarifying questions):**
+- A public Cuticle Oil page with Google Form ordering, prices, and available scents.
+  - Gabs edits the scents (add, rename, remove, sold out) and a single price list (same for every scent) **inline on the page**.
+  - She pastes the form link herself. Until then the page says "Ordering opens soon".
+- A Loyalty page only for clients flagged as members (off by default). Gabs toggles membership in the client list.
+  - The client is emailed when added; nothing is sent on removal.
+  - Perks content will come from the user later, so the page is a placeholder for now.
+- Both pages as nav tabs. On mobile the owner pages fold behind one "Owner" item.
+
+**Migration 017:**
+- **Tables.** `cuticle_oil_scents` and `cuticle_oil_prices`:
+  - length checks match the app limits (40/40/20)
+  - RLS: public `select` for anon and authenticated; owner-only `all` via `is_owner()`
+- **Order link.** `app_config` key `cuticle_oil_order_url` (seeded `''`):
+  - added to the public-read policy (recreated with the three theme keys)
+  - owner-only update policy whose `with check` allows only `''` or `^https://` up to 500 chars
+- **Profile columns.** `profiles.loyalty_member boolean not null default false` and `loyalty_member_since timestamptz`.
+- **Security fix bundled in.** `revoke update on profiles from anon, authenticated; grant update (full_name) on profiles to authenticated`.
+  - Before this, 001's "Users can update own profile name" policy allowed a client to update any column of their own row.
+  - With a membership flag that would let them self-grant loyalty. They could already edit `appointments_booked`/`appointments_completed`.
+  - Security definer functions and the service role are unaffected.
+- **`set_loyalty_member(p_client_id, p_member) returns boolean`.** Security definer, owner-only, client rows only (`for update` lock).
+  - Sets or clears `loyalty_member_since`.
+  - Returns true only on a false→true change, which is the app's cue to send the welcome email (so re-saving never re-sends).
+  - Executable by authenticated only.
+- **Verified in a rolled-back transaction:**
+  - clients can't self-grant, edit counters, call the RPC, insert scents, or change the link (they can still edit their name)
+  - owner RPC returns true then false
+  - non-https link rejected
+  - anon reads scents, prices, and the link
+
+**App code:**
+- **Pre-migration safety:**
+  - `getSessionProfile()` and `listOwnerClients()` now `select("*")`, so the new columns can't break sign-in or the client list if code ships before 017.
+  - `OwnerClientRow.loyaltyAvailable` (`"loyalty_member" in profile`) disables the toggle until then.
+  - `getCuticleOilPage()` returns `ready:false` on `PGRST205`/`42P01`.
+- **Cuticle oil:**
+  - Server actions all start with `getOwnerSession()` (RLS is the real gate) and validate with the shared limits.
+  - New rows get `max(sort_order)+1`.
+  - The order link must parse as an `https:` URL. The update uses `.select()` to detect "0 rows" (migration missing).
+  - The reader also re-validates the stored URL before rendering it. The link opens with `target=_blank rel="noopener noreferrer"`.
+  - Visitors see price rows, scent chips (sold out = struck through, with sr-only text), and an "Order now" button in the intro and in a "How to order" card.
+  - The owner sees the same three cards as forms (`useActionState` per row, confirm before Remove).
+  - **The intro and "How to order" sentences are my draft copy; the user should review them.**
+- **Loyalty:**
+  - `canSeeLoyalty()` in `lib/auth.ts`.
+  - `/loyalty` redirects everyone else to `/`. Signed-out visitors get the streaming `NEXT_REDIRECT` (307) like other gated pages because of `app/loading.tsx`.
+  - Members see "Welcome, <first name>", a "Member since <Month YYYY>" pill (Eastern), and a placeholder "Your perks" card. The owner sees an explanatory note.
+  - `setLoyaltyMembership` calls the RPC and then `notifyClientOfLoyaltyMembership(clientId)`. That reads the email through `admin.auth.admin.getUserById`, uses the themed `buildEmailHtml` (which gained an optional `ctaPath`; the button opens `/loyalty`), and never throws.
+  - The client list shows a "Loyalty member" badge and a "Make loyalty member" / "Remove from loyalty" button.
+- **Nav:** see the §2.3 rows (Oil tab for everyone, Loyalty for members, owner menu on mobile, compact owner labels on desktop).
+
+**Testing:** headless Chrome via CDP, scratchpad `cdp-oil-loyalty.mjs`, with temp owner and client accounts. **31/31 checks passed:**
+- visitor: nav, empty state, `/loyalty` → `/`
+- owner:
+  - add 2 prices and 3 scents (order kept, add form resets)
+  - rename + sold out, edit a price, remove with confirm
+  - http link rejected, https link saved
+- loyalty toggle:
+  - flag set, welcome email in Mailpit with a `/loyalty` link, badge shown
+  - removal sends no email; re-adding works
+- member: desktop tabs, visitor view (link, struck-through sold-out scent, prices), `/loyalty` content, mobile bar
+- owner mobile:
+  - bar shows 6 items; the menu lists 5 and stays on screen
+  - tapping a link navigates and closes it; an outside tap closes it
+
+Desktop tab fit was measured: it fits at 1280 and 1536, and the owner's row scrolls at 1024 (it already overflowed there before). Fixed during testing:
+- the translucent owner menu let the Book CTA show through (now `bg-background`)
+- the owner tabs overflowed at 1280 (now compact labels)
+
+A hydration mismatch seen mid-test was an **orphaned dev server** serving stale code (see §2.5). It was fixed by killing the stray PIDs and clearing `.next`, after which all checks re-passed. Cleanup:
+- temp accounts deleted; oil rows cleared; link reset to `''`
+- the snapshot matches the earlier counts (`users=2 slots=1 photo_rows=40 services=14 events=10 theme=halloween`, 0 members)
+
+`tsc --noEmit` and `npm run lint` are clean.
+
+**Next steps / handoff:**
+- Production: run **017** in the Supabase SQL Editor (safe before or after deploying).
+- Gabs then adds her scents and prices on /cuticle-oil and pastes the Google Form link.
+- The loyalty perks content is pending from the user. It currently lives as static text in `src/app/loyalty/page.tsx`.
+- The user originally chose "perks text Gabs writes". If they still want her to edit it, add an `app_config` key or table and an inline editor like the oil page.
+- Still offered and awaiting the user's go-ahead: a square favicon mark and an OG card layout.
 
 ### [Claude 1] — 2026-10-27 16:40 EDT — Local environment shut down (data preserved)
 

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import {
   sendClientPasswordReset,
   sendClientVerificationEmail,
+  setLoyaltyMembership,
   type ClientsActionState,
 } from "@/app/clients/actions";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,45 @@ function ClientPasswordResetForm({ client }: { client: OwnerClientRow }) {
   );
 }
 
+function ClientLoyaltyForm({ client }: { client: OwnerClientRow }) {
+  const [state, formAction, pending] = useActionState<
+    ClientsActionState | null,
+    FormData
+  >(setLoyaltyMembership, null);
+
+  return (
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+      <form action={formAction}>
+        <input type="hidden" name="clientId" value={client.id} />
+        <input
+          type="hidden"
+          name="member"
+          value={client.loyaltyMember ? "false" : "true"}
+        />
+        <Button
+          type="submit"
+          variant={client.loyaltyMember ? "ghost" : "outline"}
+          size="sm"
+          disabled={pending || !client.loyaltyAvailable}
+          title={
+            client.loyaltyAvailable
+              ? undefined
+              : "Run database migration 017 to turn on loyalty membership."
+          }
+          className="min-h-11 w-full sm:min-h-9 sm:w-auto"
+        >
+          {pending
+            ? "Saving…"
+            : client.loyaltyMember
+              ? "Remove from loyalty"
+              : "Make loyalty member"}
+        </Button>
+      </form>
+      <ActionMessage state={state} />
+    </div>
+  );
+}
+
 function ClientRow({ client }: { client: OwnerClientRow }) {
   return (
     <li className="border-border/60 rounded-xl border bg-background/70 p-4 shadow-xs">
@@ -94,16 +134,23 @@ function ClientRow({ client }: { client: OwnerClientRow }) {
           <p className="text-muted-foreground break-all text-sm">
             {client.email ?? "No email on file"}
           </p>
-          <span
-            className={cn(
-              "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-              client.emailVerified
-                ? "bg-emerald-500/15 text-success"
-                : "bg-amber-500/15 text-warning"
+          <div className="flex flex-wrap gap-1.5">
+            <span
+              className={cn(
+                "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+                client.emailVerified
+                  ? "bg-emerald-500/15 text-success"
+                  : "bg-amber-500/15 text-warning"
+              )}
+            >
+              {client.emailVerified ? "Email verified" : "Not verified"}
+            </span>
+            {client.loyaltyMember && (
+              <span className="bg-primary/15 text-primary inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium">
+                Loyalty member
+              </span>
             )}
-          >
-            {client.emailVerified ? "Email verified" : "Not verified"}
-          </span>
+          </div>
           <p className="text-muted-foreground text-xs">
             <span className="text-foreground font-medium">
               {client.appointmentsBooked}
@@ -121,6 +168,7 @@ function ClientRow({ client }: { client: OwnerClientRow }) {
             <ClientVerificationResendForm client={client} />
           )}
           <ClientPasswordResetForm client={client} />
+          <ClientLoyaltyForm client={client} />
         </div>
       </div>
     </li>

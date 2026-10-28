@@ -9,6 +9,9 @@ export type Profile = {
   created_at: string;
   appointments_booked: number;
   appointments_completed: number;
+  /** Migration 017; undefined until it is applied. */
+  loyalty_member?: boolean;
+  loyalty_member_since?: string | null;
 };
 
 export type BookingEventType =
@@ -34,6 +37,8 @@ export type AppointmentSlot = {
   booking_updated_at: string | null;
   completed_at: string | null;
   created_at: string;
+  /** Migration 018; reserved for loyalty members until 24h before. Undefined before 018. */
+  members_only?: boolean;
 };
 
 export type SlotWithBooker = AppointmentSlot & {

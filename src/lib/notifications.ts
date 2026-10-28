@@ -88,8 +88,16 @@ function buildEmailHtml(
     heading,
     body,
     ctaLabel,
+    ctaPath = "/book",
     footer,
-  }: { heading: string; body: string; ctaLabel: string; footer?: string }
+  }: {
+    heading: string;
+    body: string;
+    ctaLabel: string;
+    /** Site path the button opens. */
+    ctaPath?: string;
+    footer?: string;
+  }
 ): string {
   const siteUrl = getSiteUrl();
   return `
@@ -97,7 +105,7 @@ function buildEmailHtml(
       <h2 style="color:${palette.primary};margin-top:0">${heading}</h2>
       ${body}
       <p style="margin-top:24px">
-        <a href="${siteUrl}/book" style="background:${palette.primary};color:${palette.primaryText};padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid ${palette.accent}">
+        <a href="${siteUrl}${ctaPath}" style="background:${palette.primary};color:${palette.primaryText};padding:12px 20px;border-radius:8px;text-decoration:none;border:1px solid ${palette.accent}">
           ${ctaLabel}
         </a>
       </p>
@@ -187,6 +195,25 @@ function buildClientReminderHtml(
     ctaLabel: "View or manage booking",
     footer:
       "Need to reschedule? Sign in on the site and cancel from your booking on the calendar.",
+  });
+}
+
+function buildLoyaltyWelcomeHtml(fullName: string, palette: EmailPalette): string {
+  const greeting = escapeHtml(clientGreetingName(fullName));
+  return buildEmailHtml(palette, {
+    heading: "Welcome to the loyalty program!",
+    body: `
+      <p>Hi ${greeting},</p>
+      <p>Gabs added you to the <strong>NailsByGabs</strong> loyalty program. Thank you for being such a regular!</p>
+      <p style="margin-bottom:4px"><strong>Your perks:</strong></p>
+      <ul style="margin-top:0;padding-left:20px">
+        <li>A punch card: every 9th punch is 15% off that set</li>
+        <li>Turning 20? 20% off a set (Gabs sends the coupon by Instagram DM)</li>
+        <li>Members-only appointment times on the booking calendar</li>
+      </ul>
+      <p>Sign in on the site and open the <strong>Loyalty</strong> tab for the details.</p>`,
+    ctaLabel: "See your perks",
+    ctaPath: "/loyalty",
   });
 }
 
@@ -611,6 +638,39 @@ export async function notifyClientOfUpdatedAppointment(
     );
   } catch {
     // The edit should succeed even if email fails
+  }
+}
+
+/**
+ * Welcome email when Gabs makes a client a loyalty member. Uses the service
+ * role because the client's email lives in auth.users. Never throws.
+ */
+export async function notifyClientOfLoyaltyMembership(clientId: string): Promise<void> {
+  try {
+    const admin = createServiceRoleClient();
+    if (!admin) {
+      console.error("[notifications] Loyalty email skipped: SUPABASE_SERVICE_ROLE_KEY is not configured");
+      return;
+    }
+
+    const [{ data: authUser }, { data: profile }, palette] = await Promise.all([
+      admin.auth.admin.getUserById(clientId),
+      admin.from("profiles").select("full_name").eq("id", clientId).maybeSingle(),
+      getEmailPalette(),
+    ]);
+    const email = authUser?.user?.email;
+    if (!isValidRecipientEmail(email)) {
+      console.error("[notifications] Loyalty email skipped: no valid client email");
+      return;
+    }
+
+    await sendEmail(
+      email,
+      "You're a NailsByGabs loyalty member!",
+      buildLoyaltyWelcomeHtml(profile?.full_name ?? "", palette)
+    );
+  } catch {
+    // The membership change should succeed even if email fails
   }
 }
 

@@ -5,7 +5,7 @@ import { DesktopNav } from "@/components/desktop-nav";
 import { HalloweenFog, HalloweenPumpkins } from "@/components/effects/halloween";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { PageMotion } from "@/components/page-motion";
-import { getSessionProfile } from "@/lib/auth";
+import { canSeeLoyalty, getSessionProfile } from "@/lib/auth";
 import { getActiveThemeId } from "@/lib/theme";
 import {
   defaultOpenGraph,
@@ -67,6 +67,8 @@ export default async function RootLayout({
     getActiveThemeId(),
   ]);
   const isHalloween = activeThemeId === "halloween";
+  const isOwner = profile?.role === "owner";
+  const showLoyalty = canSeeLoyalty(profile);
 
   return (
     <html lang="en" data-theme={activeThemeId}>
@@ -78,13 +80,13 @@ export default async function RootLayout({
             in-app browser). Desktop: normal window scrolling. */}
         <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden md:h-auto md:min-h-svh md:overflow-visible">
           <main className="mobile-ambient-bg bg-background relative flex min-h-0 w-full flex-1 flex-col overflow-hidden md:overflow-visible">
-            <DesktopNav isOwner={profile?.role === "owner"} isSignedIn={!!user} />
+            <DesktopNav isOwner={isOwner} isSignedIn={!!user} showLoyalty={showLoyalty} />
             {isHalloween && <HalloweenPumpkins />}
             <div className="app-scroll-region flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain md:overflow-visible">
               <PageMotion>{children}</PageMotion>
             </div>
             {isHalloween && <HalloweenFog />}
-            <MobileBottomNav isOwner={profile?.role === "owner"} />
+            <MobileBottomNav isOwner={isOwner} showLoyalty={showLoyalty} />
           </main>
         </div>
       </body>

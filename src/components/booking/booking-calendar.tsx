@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CheckCircle2, Pencil, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, Crown, Lock, Pencil, Sparkles, Trash2, Undo2 } from "lucide-react";
 
 import {
   bookSlot,
@@ -42,6 +42,7 @@ import {
 } from "@/lib/booking-acknowledgements";
 import { getLocationShortLabel } from "@/lib/appointment-locations";
 import { formatSlotRange, toLocalDatetimeInputValue } from "@/lib/dates";
+import { formatMembersOnlyOpensAt, isMembersOnlyActive } from "@/lib/members-only";
 import type { Profile, SlotWithBooker } from "@/types/database";
 
 type BookingCalendarProps = {
@@ -60,6 +61,7 @@ export function BookingCalendar({
   googleConfigured,
 }: BookingCalendarProps) {
   const isOwner = profile.role === "owner";
+  const isMember = profile.loyalty_member === true;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selectedSlot, setSelectedSlot] = useState<SlotWithBooker | null>(null);
@@ -72,6 +74,7 @@ export function BookingCalendar({
   );
   const [justBookedSlot, setJustBookedSlot] = useState<SlotWithBooker | null>(null);
   const [preBooked, setPreBooked] = useState(false);
+  const [membersOnly, setMembersOnly] = useState(false);
   const [slotStartAt, setSlotStartAt] = useState("");
   const [slotEndAt, setSlotEndAt] = useState("");
   const [slotLocation, setSlotLocation] = useState("");
@@ -95,6 +98,11 @@ export function BookingCalendar({
       !!slot.booked_by &&
       new Date(slot.end_at).getTime() > Date.now()
     );
+  }
+
+  /** Members-only slot this (non-member) client can see but not book yet. */
+  function isLockedForMe(slot: SlotWithBooker): boolean {
+    return !isOwner && !isMember && isMembersOnlyActive(slot);
   }
 
   function clientFirstName(slot: SlotWithBooker): string {
@@ -154,6 +162,7 @@ export function BookingCalendar({
       setSlotEndAt("");
       setSlotLocation("");
       setPreBooked(false);
+      setMembersOnly(false);
       router.refresh();
       return null;
     },
@@ -268,13 +277,15 @@ export function BookingCalendar({
   }
 
   function getClientLabel(slot: SlotWithBooker): string {
-    if (slot.status !== "booked") return "Open";
+    if (slot.status !== "booked") return isMembersOnlyActive(slot) ? "Members only" : "Open";
     if (slot.booked_by === userId) return "Your appointment";
     return "Taken";
   }
 
   function getOwnerLabel(slot: SlotWithBooker): string {
-    if (slot.status === "open") return "Open slot";
+    if (slot.status === "open") {
+      return isMembersOnlyActive(slot) ? "Open · members only" : "Open slot";
+    }
     if (slot.booked_name) return formatOwnerSlotLabel(slot.booked_name);
     const name = slot.booker?.full_name ?? "Client";
     return formatOwnerSlotLabel(name);
@@ -286,7 +297,7 @@ export function BookingCalendar({
 
   function handleSelectSlot(slot: SlotWithBooker) {
     setSelectedSlot(slot);
-    if (!isOwner && slot.status === "open") {
+    if (!isOwner && slot.status === "open" && !isLockedForMe(slot)) {
       openBookingFlow(slot);
     }
   }
@@ -296,7 +307,7 @@ export function BookingCalendar({
   const isOpen = activeSlot?.status === "open";
   const nextOpenSlot =
     !isOwner && !bookTarget
-      ? slots.find((slot) => slot.status === "open") ?? null
+      ? slots.find((slot) => slot.status === "open" && !isLockedForMe(slot)) ?? null
       : null;
 
   return (
@@ -369,6 +380,26 @@ export function BookingCalendar({
                     Create as already taken
                   </Label>
                 </div>
+                <div className="sm:col-span-2 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="membersOnly"
+                      name="membersOnly"
+                      type="checkbox"
+                      checked={membersOnly && !preBooked}
+                      disabled={preBooked}
+                      onChange={(event) => setMembersOnly(event.target.checked)}
+                      className="h-4 w-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-sidebar-ring/50 disabled:opacity-50"
+                    />
+                    <Label htmlFor="membersOnly" className="font-normal">
+                      Loyalty members only
+                    </Label>
+                  </div>
+                  <p className="text-muted-foreground pl-6 text-xs">
+                    Only members can book it until 24 hours before; then it opens to everyone.
+                    Non-members see it as locked.
+                  </p>
+                </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="bookedName">Client name (for taken slot)</Label>
                   <Input
@@ -393,7 +424,9 @@ export function BookingCalendar({
                     ? "Adding…"
                     : preBooked
                       ? "Add taken appointment"
-                      : "Add open slot"}
+                      : membersOnly
+                        ? "Add members-only slot"
+                        : "Add open slot"}
                 </Button>
               </form>
             </CardContent>
@@ -491,6 +524,7 @@ export function BookingCalendar({
             slots={slots}
             userId={userId}
             isOwner={isOwner}
+            isMember={isMember}
             getLabel={getLabel}
             onSelectSlot={handleSelectSlot}
             selectedSlotId={selectedSlot?.id}
@@ -517,6 +551,22 @@ export function BookingCalendar({
             >
               {getLabel(activeSlot)}
             </p>
+            {isMembersOnlyActive(activeSlot) && (
+              <p className="flex items-start gap-2 text-sm text-primary">
+                {isLockedForMe(activeSlot) ? (
+                  <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+                ) : (
+                  <Crown className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+                )}
+                <span>
+                  {isOwner
+                    ? `Members only until ${formatMembersOnlyOpensAt(activeSlot.start_at)}, then open to everyone.`
+                    : isMember
+                      ? "Reserved for loyalty members, so this one's yours to grab."
+                      : `Reserved for loyalty members. It opens to everyone ${formatMembersOnlyOpensAt(activeSlot.start_at)}.`}
+                </span>
+              </p>
+            )}
             {activeSlot.notes && (isOwner || isMine) && (
               <p className="text-muted-foreground text-sm">
                 Notes: {activeSlot.notes}
@@ -534,7 +584,7 @@ export function BookingCalendar({
                   Edit
                 </Button>
               )}
-              {!isOwner && isOpen && (
+              {!isOwner && isOpen && !isLockedForMe(activeSlot) && (
                 <Button size="sm" onClick={() => openBookingFlow(activeSlot)}>
                   Reserve
                 </Button>
@@ -707,6 +757,25 @@ export function BookingCalendar({
                   <option value="binghamton">SUNY Binghamton (school year)</option>
                 </select>
               </div>
+              {editTarget.status === "open" && (
+                <div className="sm:col-span-2 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="editMembersOnly"
+                      name="membersOnly"
+                      type="checkbox"
+                      defaultChecked={editTarget.members_only === true}
+                      className="h-4 w-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-sidebar-ring/50"
+                    />
+                    <Label htmlFor="editMembersOnly" className="font-normal">
+                      Loyalty members only
+                    </Label>
+                  </div>
+                  <p className="text-muted-foreground pl-6 text-xs">
+                    Opens to everyone 24 hours before the appointment.
+                  </p>
+                </div>
+              )}
               {editTarget.status === "booked" && (
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="editBookedName">Client name</Label>

@@ -65,9 +65,10 @@ function ServiceRow({
 
   return (
     <li className="border-border/60 border-b py-4 last:border-0">
-      <form action={formAction} className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+      {/* Name on its own line, then price + note: fits half-width cards and split-screen windows. */}
+      <form action={formAction} className="grid grid-cols-[7rem_minmax(0,1fr)] items-end gap-3">
         <input type="hidden" name="itemId" value={item.id} />
-        <div>
+        <div className="col-span-2">
           <p className="font-medium">{primary}</p>
           {secondary && (
             <p className="text-muted-foreground mt-1 text-xs">{secondary}</p>
@@ -82,7 +83,7 @@ function ServiceRow({
             name="price"
             defaultValue={item.price}
             required
-            className="w-full sm:w-28"
+            className="w-full"
           />
         </div>
         <div className="space-y-1">
@@ -94,10 +95,10 @@ function ServiceRow({
             name="note"
             defaultValue={item.note ?? ""}
             placeholder="e.g. Price varies"
-            className="w-full sm:w-44"
+            className="w-full"
           />
         </div>
-        <div className="sm:col-span-3 flex items-center gap-3">
+        <div className="col-span-2 flex items-center gap-3">
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? "Saving…" : "Save"}
           </Button>
@@ -125,7 +126,7 @@ type ServicesMenuProps = {
 export function ServicesMenu({ categories, isOwner }: ServicesMenuProps) {
   if (categories.length === 0) {
     return (
-      <p className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
+      <p className="text-muted-foreground mx-auto w-full max-w-4xl rounded-xl border border-dashed p-8 text-center text-sm">
         Run <code className="text-xs">002_services_and_google.sql</code> in
         Supabase to enable the editable services menu.
       </p>
@@ -133,15 +134,15 @@ export function ServicesMenu({ categories, isOwner }: ServicesMenuProps) {
   }
 
   return (
-    <div className="grid max-w-4xl gap-6 md:grid-cols-2">
+    <div className="mx-auto grid w-full max-w-4xl gap-6 md:grid-cols-2">
       {isOwner && (
         <p className="md:col-span-2 rounded-xl border border-accent/30 bg-secondary/60 px-4 py-3 text-sm text-primary">
           Owner mode — update prices below and click Save on each row.
         </p>
       )}
       {categories.map((category) => (
-        <ScrollReveal key={category.id}>
-          <section className="spotlight-card rounded-2xl border border-accent/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm md:p-6">
+        <ScrollReveal key={category.id} className="[&>.scroll-reveal-inner]:h-full">
+          <section className="h-full rounded-2xl border border-accent/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm md:p-6">
             <h3 className="font-serif border-b border-accent/30 pb-3 text-2xl text-primary">
               {category.title}
             </h3>

@@ -23,19 +23,11 @@ async function getUpcomingSlots(
 
   const { data, error } = await supabase
     .from("appointment_slots")
+    // "*" so members_only (migration 018) is included once it exists without
+    // breaking the page before then.
     .select(
       `
-      id,
-      start_at,
-      end_at,
-      status,
-      location,
-      booked_by,
-      booked_name,
-      notes,
-      created_at,
-      booking_updated_at,
-      completed_at,
+      *,
       booker:profiles!booked_by (
         full_name
       )
@@ -72,6 +64,7 @@ async function getUpcomingSlots(
       created_at: row.created_at,
       booking_updated_at: row.booking_updated_at,
       completed_at: row.completed_at,
+      members_only: row.members_only === true,
       booker: booker ?? null,
     } satisfies SlotWithBooker;
   });
@@ -160,7 +153,9 @@ export default async function BookPage({
           <p className="text-muted-foreground rhythm-copy mt-3 text-sm leading-relaxed md:text-base">
             {profile?.role === "owner"
               ? "Add open time slots for clients. Booked appointments show client names."
-              : "Choose an open slot and add notes for special requests. Other booked times appear as Taken."}
+              : profile?.loyalty_member
+                ? "Choose an open slot and add notes for special requests. Other booked times appear as Taken. Times marked Members only are reserved for you as a loyalty member."
+                : "Choose an open slot and add notes for special requests. Other booked times appear as Taken. Times marked Members only are reserved for loyalty members and open to everyone 24 hours before the appointment."}
           </p>
           {profile?.role !== "owner" && user && (
             <ol className="mt-4 grid gap-2 text-sm sm:grid-cols-3">

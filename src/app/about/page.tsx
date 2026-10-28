@@ -46,7 +46,7 @@ export default function AboutPage() {
               {bio}
             </p>
 
-            <Card className="spotlight-card border-accent/25 py-4">
+            <Card className="border-accent/25 py-4">
               <CardContent className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
                   <MapPin className="mt-0.5 size-5 shrink-0 text-accent" />

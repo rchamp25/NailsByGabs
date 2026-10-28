@@ -1,6 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { getOwnerSession } from "@/lib/auth";
+import { notifyClientOfLoyaltyMembership } from "@/lib/notifications";
 import { getAuthCallbackUrl, getPasswordResetCallbackUrl } from "@/lib/site-url";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -128,6 +131,66 @@ export async function sendClientVerificationEmail(
     return {
       success: true,
       message: `Verification email sent to ${email}.`,
+    };
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error ? err.message : "Something went wrong. Try again.",
+    };
+  }
+}
+
+/**
+ * Add or remove a client from the loyalty program. The set_loyalty_member RPC
+ * (migration 017) checks the owner and returns true only when the client was
+ * newly added, which is when the welcome email goes out. Removal sends nothing.
+ */
+export async function setLoyaltyMembership(
+  _prev: ClientsActionState | null,
+  formData: FormData
+): Promise<ClientsActionState> {
+  if (!(await getOwnerSession())) {
+    return { error: "Only the owner can change loyalty membership." };
+  }
+
+  if (!getSupabaseEnv()) {
+    return { error: getSupabaseConfigError() };
+  }
+
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const member = formData.get("member") === "true";
+
+  if (!clientId) {
+    return { error: "Missing client." };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: newlyAdded, error } = await supabase.rpc("set_loyalty_member", {
+      p_client_id: clientId,
+      p_member: member,
+    });
+
+    if (error) {
+      return {
+        error: error.message.includes("set_loyalty_member")
+          ? "Loyalty membership needs database migration 017."
+          : error.message,
+      };
+    }
+
+    if (newlyAdded === true) {
+      await notifyClientOfLoyaltyMembership(clientId);
+    }
+
+    revalidatePath("/clients");
+    return {
+      success: true,
+      message: member
+        ? newlyAdded
+          ? "Added to the loyalty program. Welcome email sent."
+          : "Already a loyalty member."
+        : "Removed from the loyalty program.",
     };
   } catch (err) {
     return {

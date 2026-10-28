@@ -59,6 +59,7 @@ export async function createSlot(formData: FormData) {
   const startRaw = String(formData.get("startAt") ?? "");
   const endRaw = String(formData.get("endAt") ?? "");
   const preBooked = String(formData.get("preBooked") ?? "") === "on";
+  const membersOnly = !preBooked && formData.get("membersOnly") === "on";
   const bookedName = String(formData.get("bookedName") ?? "").trim();
   const locationRaw = String(formData.get("location") ?? "").trim();
   const startAt = parseBusinessDateTimeLocal(startRaw);
@@ -87,12 +88,14 @@ export async function createSlot(formData: FormData) {
       status: preBooked ? "booked" : "open",
       booked_by: null,
       booked_name: preBooked ? bookedName : null,
+      // Only sent when set, so plain slots still work before migration 018.
+      ...(membersOnly ? { members_only: true } : {}),
     })
     .select("id")
     .single();
 
   if (error) {
-    return { error: error.message };
+    return { error: membersOnlyColumnError(error) ?? error.message };
   }
 
   if (data?.id) {
@@ -101,6 +104,13 @@ export async function createSlot(formData: FormData) {
 
   revalidatePath("/book");
   return { success: true };
+}
+
+/** Friendly message when members_only is written before migration 018 exists. */
+function membersOnlyColumnError(error: { message: string; code?: string }): string | null {
+  return error.message.includes("members_only")
+    ? "Members-only times need database migration 018."
+    : null;
 }
 
 export async function updateSlot(
@@ -116,6 +126,7 @@ export async function updateSlot(
   const endRaw = String(formData.get("endAt") ?? "");
   const locationRaw = String(formData.get("location") ?? "").trim();
   const bookedName = String(formData.get("bookedName") ?? "").trim();
+  const membersOnly = formData.get("membersOnly") === "on";
   const startAt = parseBusinessDateTimeLocal(startRaw);
   const endAt = parseBusinessDateTimeLocal(endRaw);
 
@@ -135,7 +146,8 @@ export async function updateSlot(
   const supabase = await createClient();
   const { data: existing, error: fetchError } = await supabase
     .from("appointment_slots")
-    .select("id, status, start_at, end_at, location, booked_by")
+    // "*" so members_only (migration 018) is read when it exists.
+    .select("*")
     .eq("id", slotId)
     .maybeSingle();
 
@@ -160,6 +172,11 @@ export async function updateSlot(
       ? await readUpcomingClientBooking(slotId)
       : null;
 
+  // The members-only toggle is shown for open slots only; booked slots keep
+  // their flag (it applies again if the booking is released or cancelled).
+  const membersOnlyChanged =
+    existing.status === "open" && (existing.members_only === true) !== membersOnly;
+
   const { error } = await supabase
     .from("appointment_slots")
     .update({
@@ -169,11 +186,12 @@ export async function updateSlot(
       booked_name: existing.status === "booked" ? bookedName : null,
       // A new time gets a fresh 48-hour reminder from the daily cron.
       ...(timeChanged ? { reminder_48h_sent_at: null } : {}),
+      ...(membersOnlyChanged ? { members_only: membersOnly } : {}),
     })
     .eq("id", slotId);
 
   if (error) {
-    return { error: error.message };
+    return { error: membersOnlyColumnError(error) ?? error.message };
   }
 
   await syncGoogleForSlot(slotId);

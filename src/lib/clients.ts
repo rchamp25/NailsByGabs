@@ -12,6 +12,10 @@ export type OwnerClientRow = {
   createdAt: string;
   appointmentsBooked: number;
   appointmentsCompleted: number;
+  /** False until migration 017 is applied. */
+  loyaltyMember: boolean;
+  /** False until migration 017 is applied (the toggle is disabled until then). */
+  loyaltyAvailable: boolean;
 };
 
 async function listAllAuthUsers(): Promise<User[] | null> {
@@ -55,9 +59,8 @@ export async function listOwnerClients(): Promise<{
     await Promise.all([
       admin
         .from("profiles")
-        .select(
-          "id, full_name, created_at, appointments_booked, appointments_completed"
-        )
+        // "*" so the list keeps working before migration 017 adds loyalty_member.
+        .select("*")
         .eq("role", "client")
         .order("full_name"),
       listAllAuthUsers(),
@@ -86,6 +89,8 @@ export async function listOwnerClients(): Promise<{
       createdAt: profile.created_at,
       appointmentsBooked: profile.appointments_booked ?? 0,
       appointmentsCompleted: profile.appointments_completed ?? 0,
+      loyaltyMember: profile.loyalty_member === true,
+      loyaltyAvailable: "loyalty_member" in profile,
     };
   });
 
